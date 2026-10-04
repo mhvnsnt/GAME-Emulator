@@ -1,5 +1,6 @@
-from game_emulator.hybrid import HybridProfile, RuntimeSource, compose_frame
 import pytest
+
+from game_emulator.hybrid import HybridProfile, RuntimeSource, compose_frame
 
 
 def test_first_hybrid_composition_is_explicit_and_deterministic():
