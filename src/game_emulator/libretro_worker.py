@@ -9,7 +9,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
 
-from .libretro_abi import (
+from .sandbox import SandboxPolicy, apply_native_core_sandbox\n\nfrom .libretro_abi import (
     LibretroCallbacks,
     retro_audio_sample_batch_t,
     retro_audio_sample_t,
