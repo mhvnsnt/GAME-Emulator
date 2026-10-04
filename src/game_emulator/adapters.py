@@ -38,6 +38,28 @@ def parse_info(path: Path) -> dict[str, str]:
     return values
 
 
+def compatible_cores(
+    inventory: dict[str, Any],
+    *,
+    system: str,
+    extension: str,
+) -> list[dict[str, Any]]:
+    """Return installed cores matching both system and extension metadata."""
+    normalized_extension = extension.lower().lstrip(".")
+    matches: list[dict[str, Any]] = []
+    for core in inventory.get("cores", []):
+        systems = set(core.get("supported_systems", []))
+        extensions = {
+            str(value).lower().lstrip(".")
+            for value in core.get("supported_extensions", [])
+        }
+        system_match = any(system.lower() in value.lower() for value in systems)
+        extension_match = normalized_extension in extensions
+        if system_match and extension_match:
+            matches.append(core)
+    return matches
+
+
 def inventory_cores(core_dir: Path, info_dir: Path | None = None) -> dict[str, Any]:
     """Hash and describe installed core files; never dlopen or run them."""
     root = core_dir.expanduser().resolve(strict=True)
