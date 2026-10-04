@@ -13,10 +13,12 @@ Seatbelt/App Sandbox wrapper.
 from __future__ import annotations
 
 import ctypes
-import errno
 import os
 import platform
-import resource
+try:
+    import resource
+except ImportError:  # pragma: no cover - Windows
+    resource = None
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -58,7 +60,6 @@ _LANDLOCK_ACCESS_FS_MAKE_SYM = 1 << 12
 _LANDLOCK_ACCESS_FS_REFER = 1 << 13
 _LANDLOCK_ACCESS_FS_TRUNCATE = 1 << 14
 _LANDLOCK_ACCESS_FS_IOCTL_DEV = 1 << 15
-_LANDLOCK_ACCESS_FS_EXECUTE = _LANDLOCK_ACCESS_FS_EXECUTE
 
 _LANDLOCK_ACCESS_NET_BIND_TCP = 1 << 0
 _LANDLOCK_ACCESS_NET_CONNECT_TCP = 1 << 1
@@ -249,6 +250,8 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> None:
 
 
 def _apply_unix_limits(policy: SandboxPolicy) -> None:
+    if resource is None:
+        raise SandboxError("POSIX resource limits are unavailable on this platform")
     limits = (
         ("RLIMIT_CPU", policy.max_cpu_seconds),
         ("RLIMIT_FSIZE", policy.max_file_size),
