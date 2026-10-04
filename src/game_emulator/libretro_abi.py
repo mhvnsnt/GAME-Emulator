@@ -1,5 +1,6 @@
 """Small audited ctypes declaration layer for the Libretro C ABI."""
 from __future__ import annotations
+
 import ctypes
 
 retro_video_refresh_t = ctypes.CFUNCTYPE(
