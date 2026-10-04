@@ -31,6 +31,15 @@ Compare installed Libretro core metadata against catalog candidates (metadata on
 game-emulator-open-source --installed-cores ~/.config/retroarch/cores --info ~/.config/retroarch/cores
 ```
 
+Run a one-frame smoke test with a core and authorized content already on your machine:
+
+```bash
+game-emulator-libretro-smoke --core /path/to/installed/core_libretro.so --content /path/to/authorized/homebrew.gba
+# Add --system-dir /path/to/your/authorized/firmware when the core needs it.
+```
+
+This command does not download content or firmware. It fails closed if the local host cannot establish the strict OS policy and reports the sandbox status only after the worker responds.
+
 Use the actual core and info directories for your installation. The report distinguishes catalog entries from local core files whose `.info` metadata matches a known system and representative extension. A metadata match is not proof of runtime compatibility, successful gameplay, or sandbox containment.
 
 The catalog does not install emulator binaries, download game files, or certify a project for redistribution. Every exact release and its dependencies/assets must be license-reviewed before bundling. See `docs/OPEN-SOURCE-BACKENDS.md`, `docs/ARCHITECTURE.md`, `docs/LIBRETRO-WORKER.md`, and `docs/LIBRETRO-FFI-AND-OPEN-SOURCE.md` for safety boundaries and integration gates.
