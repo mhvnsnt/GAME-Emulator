@@ -146,6 +146,8 @@ def command_for(backend: Backend, executable: str, content: Path) -> list[str]:
         return [executable, "-e", str(content)]
     if backend.backend_id == "pcsx2":
         return [executable, str(content)]
+    if backend.backend_id == "ppsspp":
+        return [executable, str(content)]
     raise ValueError(
         f"{backend.backend_id} requires its dedicated launch adapter; no guessed command is allowed"
     )
