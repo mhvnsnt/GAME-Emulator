@@ -92,14 +92,35 @@ _LANDLOCK_SYSCALLS = {
     "ppc64le": (444, 445, 446),
 }
 
-# Linux syscall numbers for blocking socket/network operations with seccomp.
-# Unsupported architectures fail closed instead of claiming network isolation.
-_NETWORK_SYSCALLS = {
-    "x86_64": (41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 288, 299, 307, 425, 426, 427),
-    "amd64": (41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 288, 299, 307, 425, 426, 427),
-    "aarch64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
-    "arm64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
-    "riscv64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
+# Linux syscall numbers denied in the strict worker seccomp policy.
+# This blocks network access, cross-process memory access, kernel BPF/perf
+# surfaces, namespace/mount changes, and io_uring. Unsupported architectures fail closed.
+_DENIED_SYSCALLS = {
+    "x86_64": (
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+        101, 155, 165, 166, 248, 249, 250, 272, 288, 298, 299, 304, 307,
+        308, 310, 311, 312, 321, 323, 425, 426, 427, 434, 438, 440,
+    ),
+    "amd64": (
+        41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
+        101, 155, 165, 166, 248, 249, 250, 272, 288, 298, 299, 304, 307,
+        308, 310, 311, 312, 321, 323, 425, 426, 427, 434, 438, 440,
+    ),
+    "aarch64": (
+        39, 40, 41, 97, 117, 198, 199, 200, 201, 202, 203, 204, 205,
+        206, 207, 208, 209, 210, 211, 212, 217, 218, 219, 241, 242, 243,
+        265, 268, 270, 271, 272, 277, 280, 282, 425, 426, 427, 434, 438, 440,
+    ),
+    "arm64": (
+        39, 40, 41, 97, 117, 198, 199, 200, 201, 202, 203, 204, 205,
+        206, 207, 208, 209, 210, 211, 212, 217, 218, 219, 241, 242, 243,
+        265, 268, 270, 271, 272, 277, 280, 282, 425, 426, 427, 434, 438, 440,
+    ),
+    "riscv64": (
+        39, 40, 41, 97, 117, 198, 199, 200, 201, 202, 203, 204, 205,
+        206, 207, 208, 209, 210, 211, 212, 217, 218, 219, 241, 242, 243,
+        265, 268, 270, 271, 272, 277, 280, 282, 425, 426, 427, 434, 438, 440,
+    ),
 }
 _SECCOMP_SYSCALLS = {
     "x86_64": 317,
@@ -308,15 +329,15 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
 
 
 def _apply_linux_network_seccomp() -> None:
-    """Deny socket/network syscalls, including UDP on pre-ABI-10 kernels."""
+    """Deny network and selected high-risk process/kernel syscalls process-wide."""
     architecture = platform.machine().lower()
     try:
-        syscalls = _NETWORK_SYSCALLS[architecture]
+        syscalls = _DENIED_SYSCALLS[architecture]
         seccomp_syscall = _SECCOMP_SYSCALLS[architecture]
         audit_arch = _AUDIT_ARCH[architecture]
     except KeyError as exc:
         raise SandboxError(
-            f"seccomp network syscall policy is not defined for {architecture}"
+            f"seccomp syscall policy is not defined for {architecture}"
         ) from exc
 
     # x32 syscall numbers share x86_64's table with __X32_SYSCALL_BIT set.
@@ -349,7 +370,7 @@ def _apply_linux_network_seccomp() -> None:
         ctypes.byref(program),
     ) != 0:
         err = ctypes.get_errno()
-        raise SandboxError(f"seccomp network filter failed: {os.strerror(err)}")
+        raise SandboxError(f"seccomp filter failed: {os.strerror(err)}")
 
 
 def _apply_unix_limits(policy: SandboxPolicy) -> None:
