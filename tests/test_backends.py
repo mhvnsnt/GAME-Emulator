@@ -1,3 +1,7 @@
+from pathlib import Path
+
+import pytest
+
 from game_emulator.backends import candidates, command_for, discover_backends
 
 
@@ -17,8 +21,12 @@ def test_candidates_are_capability_based():
 
 
 def test_dolphin_command_is_explicit():
-    backend = next(backend for backend in candidates(system="Nintendo GameCube", extension=".iso") if backend.backend_id == "dolphin")
-    assert command_for(backend, "/usr/bin/dolphin-emu", __import__("pathlib").Path("game.iso")) == [
+    backend = next(
+        backend
+        for backend in candidates(system="Nintendo GameCube", extension=".iso")
+        if backend.backend_id == "dolphin"
+    )
+    assert command_for(backend, "/usr/bin/dolphin-emu", Path("game.iso")) == [
         "/usr/bin/dolphin-emu",
         "-e",
         "game.iso",
@@ -26,10 +34,41 @@ def test_dolphin_command_is_explicit():
 
 
 def test_ppsspp_and_azahar_are_declared_for_their_systems():
-    psp = {b.backend_id for b in candidates(system="Sony PlayStation Portable", extension=".iso")}
-    three_ds = {b.backend_id for b in candidates(system="Nintendo 3DS", extension=".3ds")}
+    psp = {
+        backend.backend_id
+        for backend in candidates(
+            system="Sony PlayStation Portable", extension=".iso"
+        )
+    }
+    three_ds = {
+        backend.backend_id
+        for backend in candidates(system="Nintendo 3DS", extension=".3ds")
+    }
     assert "ppsspp" in psp
     assert "pcsx2" not in psp
     assert "azahar" in three_ds
     assert "dolphin" not in three_ds
-\n\ndef test_ppsspp_command_is_explicit():\n    backend = next(backend for backend in candidates(system="Sony PlayStation Portable", extension=".iso") if backend.backend_id == "ppsspp")\n    assert command_for(backend, "/usr/bin/ppsspp", __import__("pathlib").Path("game.iso")) == [\n        "/usr/bin/ppsspp",\n        "game.iso",\n    ]\n\n\ndef test_azahar_stays_unlaunched_until_its_cli_contract_is_verified():\n    backend = next(backend for backend in candidates(system="Nintendo 3DS", extension=".3ds") if backend.backend_id == "azahar")\n    import pytest\n    with pytest.raises(ValueError, match="dedicated launch adapter"):\n        command_for(backend, "/usr/bin/azahar", __import__("pathlib").Path("game.3ds"))\n
+
+
+def test_ppsspp_command_is_explicit():
+    backend = next(
+        backend
+        for backend in candidates(
+            system="Sony PlayStation Portable", extension=".iso"
+        )
+        if backend.backend_id == "ppsspp"
+    )
+    assert command_for(backend, "/usr/bin/ppsspp", Path("game.iso")) == [
+        "/usr/bin/ppsspp",
+        "game.iso",
+    ]
+
+
+def test_azahar_stays_unlaunched_until_its_cli_contract_is_verified():
+    backend = next(
+        backend
+        for backend in candidates(system="Nintendo 3DS", extension=".3ds")
+        if backend.backend_id == "azahar"
+    )
+    with pytest.raises(ValueError, match="dedicated launch adapter"):
+        command_for(backend, "/usr/bin/azahar", Path("game.3ds"))
