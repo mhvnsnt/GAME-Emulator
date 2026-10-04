@@ -17,7 +17,7 @@ class OpenSourceProject:
     systems: tuple[str, ...]
     integration_kind: str
     upstream_url: str
-    license_spdx: str
+    license_label: str
     status: str
     notes: str
 
@@ -152,7 +152,7 @@ def redistribution_eligibility(project_id: str) -> dict[str, str | bool]:
         "eligible": False,
         "status": "manual_license_review_required",
         "reason": (
-            f"Catalog license is {project.license_spdx}; verify the exact release, "
+            f"Catalog license is {project.license_label}; verify the exact release, "
             "dependencies, assets, and license notices before redistribution."
         ),
     }
