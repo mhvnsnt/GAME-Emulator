@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from game_emulator.library import infer_system, import_library
+from game_emulator.library import import_library, infer_system
 
 
 def test_explicit_playstation_override_classifies_shared_disc_extensions():
