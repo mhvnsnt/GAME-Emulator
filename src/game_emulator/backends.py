@@ -132,3 +132,18 @@ def command_for(backend: Backend, executable: str, content: Path) -> list[str]:
     raise ValueError(
         f"{backend.backend_id} requires its dedicated launch adapter; no guessed command is allowed"
     )
+
+
+def main() -> None:
+    import argparse
+    import json
+
+    parser = argparse.ArgumentParser(
+        description="Discover installed emulator backends without launching them"
+    )
+    parser.add_argument("--installed-only", action="store_true")
+    args = parser.parse_args()
+    rows = discover_backends()
+    if args.installed_only:
+        rows = [row for row in rows if row["installed"]]
+    print(json.dumps(rows, indent=2))
