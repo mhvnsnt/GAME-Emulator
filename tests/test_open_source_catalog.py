@@ -3,6 +3,7 @@ from game_emulator.open_source_catalog import (
     list_projects,
     redistribution_eligibility,
 )
+from game_emulator.open_source_catalog_cli import installed_core_matches
 
 
 def test_catalog_entries_have_upstream_and_license_provenance():
@@ -29,3 +30,42 @@ def test_known_project_requires_exact_release_license_review():
     result = redistribution_eligibility("ppsspp")
     assert result["eligible"] is False
     assert result["status"] == "manual_license_review_required"
+
+
+def test_installed_core_matches_require_system_and_extension_metadata():
+    inventory = {
+        "cores": [
+            {
+                "file": "mgba_libretro.so",
+                "display_name": "mGBA",
+                "supported_systems": ["Nintendo - Game Boy Advance"],
+                "supported_extensions": ["gba", "gbc", "gb"],
+                "sha256": "a" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "fake_psx_core.so",
+                "display_name": "Fake PSX",
+                "supported_systems": ["Sony - PlayStation"],
+                "supported_extensions": ["iso"],
+                "sha256": "b" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "no_metadata_core.so",
+                "display_name": "Unknown",
+                "supported_systems": [],
+                "supported_extensions": [],
+                "sha256": "c" * 64,
+                "metadata_present": False,
+                "trust_status": "inventory_only_not_executed",
+            },
+        ]
+    }
+    matches = installed_core_matches(inventory)
+    mgba = next(row for row in matches if row["project_id"] == "mgba")
+    assert [row["core_file"] for row in mgba["installed_metadata_matches"]] == ["mgba_libretro.so"]
+    assert all(row["project_id"] != "beetle-psx" for row in matches)
+    assert all(row["project_id"] != "nestopia" for row in matches)
