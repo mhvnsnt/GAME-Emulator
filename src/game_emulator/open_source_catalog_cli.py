@@ -11,46 +11,48 @@ from pathlib import Path
 from game_emulator.adapters import compatible_cores, inventory_cores
 from game_emulator.open_source_catalog import list_projects, redistribution_eligibility
 
-# Catalog labels are human-facing; these are explicit, conservative bridges to
-# the system names commonly emitted by Libretro .info files.
-LIBRETRO_SYSTEM_ALIASES: dict[str, tuple[str, ...]] = {
+# Explicit aliases bridge human-facing catalog labels to names emitted by
+# Libretro .info files. A match requires BOTH system and at least one known
+# extension; a core's filename is never treated as proof of compatibility.
+LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "mgba": (
-        "Nintendo Game Boy Advance",
-        "Nintendo Game Boy Color",
-        "Nintendo Game Boy",
+        ("Nintendo Game Boy Advance", ("gba",)),
+        ("Nintendo Game Boy Color", ("gbc",)),
+        ("Nintendo Game Boy", ("gb",)),
     ),
     "nestopia": (
-        "Nintendo NES",
-        "Nintendo Entertainment System",
-        "Nintendo Famicom Disk System",
+        ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo Entertainment System", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo Famicom Disk System", ("fds",)),
     ),
-    "beetle-psx": ("Sony PlayStation",),
+    "beetle-psx": (
+        ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u")),
+    ),
 }
 
 
 def installed_core_matches(inventory: dict[str, object]) -> list[dict[str, object]]:
     """Match catalog candidates against installed core .info metadata, not file names."""
-    projects = list_projects()
     matches: list[dict[str, object]] = []
-    for project in projects:
+    for project in list_projects():
         project_id = str(project["project_id"])
-        systems = LIBRETRO_SYSTEM_ALIASES.get(project_id, ())
-        if not systems:
-            continue
+        targets = LIBRETRO_TARGETS.get(project_id, ())
         project_matches: list[dict[str, object]] = []
-        for system in systems:
-            for core in compatible_cores(inventory, system=system, extension=_extension_for_system(system)):
-                match = {
-                    "system": system,
-                    "core_file": core.get("file"),
-                    "display_name": core.get("display_name"),
-                    "supported_extensions": core.get("supported_extensions", []),
-                    "sha256": core.get("sha256"),
-                    "metadata_present": core.get("metadata_present", False),
-                    "trust_status": core.get("trust_status", "unknown"),
-                }
-                if match not in project_matches:
-                    project_matches.append(match)
+        for system, extensions in targets:
+            for extension in extensions:
+                for core in compatible_cores(inventory, system=system, extension=extension):
+                    match = {
+                        "system": system,
+                        "matched_extension": extension,
+                        "core_file": core.get("file"),
+                        "display_name": core.get("display_name"),
+                        "supported_extensions": core.get("supported_extensions", []),
+                        "sha256": core.get("sha256"),
+                        "metadata_present": core.get("metadata_present", False),
+                        "trust_status": core.get("trust_status", "unknown"),
+                    }
+                    if match not in project_matches:
+                        project_matches.append(match)
         if project_matches:
             matches.append({
                 "project_id": project_id,
@@ -59,19 +61,6 @@ def installed_core_matches(inventory: dict[str, object]) -> list[dict[str, objec
                 "warning": "Metadata match only; runtime compatibility and sandboxing are not certified.",
             })
     return matches
-
-
-def _extension_for_system(system: str) -> str:
-    """Use a known representative extension to require system AND extension metadata."""
-    return {
-        "Nintendo Game Boy Advance": ".gba",
-        "Nintendo Game Boy Color": ".gbc",
-        "Nintendo Game Boy": ".gb",
-        "Nintendo NES": ".nes",
-        "Nintendo Entertainment System": ".nes",
-        "Nintendo Famicom Disk System": ".fds",
-        "Sony PlayStation": ".cue",
-    }[system]
 
 
 def main() -> None:
