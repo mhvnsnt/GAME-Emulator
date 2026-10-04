@@ -73,6 +73,8 @@ _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET = 1 << 0
 _LANDLOCK_SCOPE_SIGNAL = 1 << 1
 
 _PR_SET_NO_NEW_PRIVS = 38
+_PR_SET_SECCOMP = 22
+_SECCOMP_MODE_FILTER = 2
 _SECCOMP_SET_MODE_FILTER = 1
 _SECCOMP_FILTER_FLAG_TSYNC = 1
 _SECCOMP_RET_KILL_PROCESS = 0x80000000
@@ -349,8 +351,13 @@ def _apply_linux_landlock(
     return abi
 
 
-def _apply_linux_network_seccomp() -> None:
-    """Deny network and selected high-risk process/kernel syscalls process-wide."""
+def _apply_linux_network_seccomp(*, synchronize_threads: bool = True) -> None:
+    """Deny network and selected high-risk process/kernel syscalls.
+
+    Production uses seccomp TSYNC to cover every worker thread. The single-threaded
+    integration test can disable TSYNC only to validate the filter in restricted CI
+    containers that reject the seccomp() syscall entirely.
+    """.strip()
     architecture = platform.machine().lower()
     try:
         syscalls = _DENIED_SYSCALLS[architecture]
@@ -384,12 +391,26 @@ def _apply_linux_network_seccomp() -> None:
     )
     # Landlock setup has already applied PR_SET_NO_NEW_PRIVS, required by
     # unprivileged seccomp filters. No syscall may create/use network sockets.
-    if _syscall(
-        seccomp_syscall,
-        _SECCOMP_SET_MODE_FILTER,
-        _SECCOMP_FILTER_FLAG_TSYNC,
-        ctypes.byref(program),
-    ) != 0:
+    if synchronize_threads:
+        result = _syscall(
+            seccomp_syscall,
+            _SECCOMP_SET_MODE_FILTER,
+            _SECCOMP_FILTER_FLAG_TSYNC,
+            ctypes.byref(program),
+        )
+        if result > 0:
+            raise SandboxError(
+                f"seccomp TSYNC could not synchronize thread id {result}"
+            )
+    else:
+        result = _syscall(
+            _PR_SET_SECCOMP,
+            _SECCOMP_MODE_FILTER,
+            ctypes.byref(program),
+            0,
+            0,
+        )
+    if result != 0:
         err = ctypes.get_errno()
         raise SandboxError(f"seccomp filter failed: {os.strerror(err)}")
 
