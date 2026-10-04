@@ -25,25 +25,45 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
         ("Nintendo Game Boy Color", ("gbc",)),
         ("Game Boy/Color", ("gb", "gbc")),
     ),
+    "beetle-gba": (
+        ("Nintendo Game Boy Advance", ("gba", "agb", "bin")),
+    ),
     "nestopia": (
         ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
         ("Nintendo Entertainment System", ("nes", "unf", "unif", "nsf")),
         ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo - Nintendo Entertainment System", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo - Family Computer Disk System", ("fds",)),
         ("Nintendo Famicom Disk System", ("fds",)),
     ),
     "fceumm": (
-        ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
-        ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo NES", ("nes", "unf", "unif")),
+        ("Nintendo NES/Famicom", ("nes", "unf", "unif")),
+        ("Nintendo - Nintendo Entertainment System", ("nes", "unf", "unif")),
+        ("Nintendo - Family Computer Disk System", ("fds",)),
         ("Nintendo Famicom Disk System", ("fds",)),
     ),
     "mesen": (
-        ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
-        ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo NES", ("nes", "unf", "unif")),
+        ("Nintendo NES/Famicom", ("nes", "unf", "unif")),
+        ("Nintendo - Nintendo Entertainment System", ("nes", "unf", "unif")),
+        ("Nintendo - Family Computer Disk System", ("fds",)),
     ),
     "snes9x": (
         ("Nintendo Super Nintendo Entertainment System", ("sfc", "smc")),
         ("Nintendo SNES/SFC", ("sfc", "smc", "swc", "fig", "bs", "st")),
         ("Nintendo Sufami Turbo", ("st",)),
+    ),
+    "beetle-bsnes": (
+        ("Nintendo Super Nintendo Entertainment System", ("smc", "fig", "bs", "st", "sfc")),
+    ),
+    "mesen-s": (
+        ("Nintendo Super Nintendo Entertainment System", ("sfc", "smc", "fig", "swc", "bs")),
+        ("Nintendo Game Boy", ("gb",)),
+        ("Nintendo Game Boy Color", ("gbc",)),
+    ),
+    "flycast": (
+        ("Sega - Dreamcast/NAOMI", ("cdi", "gdi", "chd", "cue", "bin", "elf", "zip")),
     ),
     "beetle-psx": (
         ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u")),
