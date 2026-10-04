@@ -1,4 +1,4 @@
-"""Explicit, sandboxed launch handoff to an installed RetroArch/libretro runtime."""
+"""Validate a RetroArch launch command; native execution remains fail-closed."""
 from __future__ import annotations
 
 import argparse
@@ -81,8 +81,9 @@ def launch_game(
         "sha256": game["sha256"],
         "command": command,
         "dry_run": dry_run,
-        "status": "command_ready",
+        "status": "command_preview_only" if dry_run else "launch_refused_until_sandbox_verified",
         "sandboxed": False,
+        "security_status": "unverified-policy",
     }
     if not dry_run:
         try:
@@ -99,7 +100,7 @@ def launch_game(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Launch a cataloged file using installed RetroArch inside an explicit OS sandbox"
+        description="Validate a cataloged RetroArch command; execution is blocked until OS containment is verified"
     )
     parser.add_argument("--library", type=Path, default=Path.home() / "GAME-Emulator-Library")
     parser.add_argument("--sha256", required=True, help="hash shown by game-emulator list")
@@ -108,12 +109,12 @@ def main() -> None:
     parser.add_argument("--system", help="explicitly confirm/override an ambiguous system label")
     parser.add_argument(
         "--sandbox-launcher",
-        help="explicit OS sandbox wrapper; otherwise GAME_EMULATOR_SANDBOX_LAUNCHER is used",
+        help="preview a wrapper command; configuration alone does not verify sandbox security",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="validate paths and print the unsandboxed inner command without launching",
+        help="validate catalog, content hash and paths, then print a command preview without launching",
     )
     args = parser.parse_args()
     try:
