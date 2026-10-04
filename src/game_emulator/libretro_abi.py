@@ -1,22 +1,25 @@
-"""Small audited ctypes declaration layer for the Libretro C ABI.
-
-Only the worker process should load a native core. This module contains ABI
-types/constants and no native library loading.
-"""
+"""Small audited ctypes declaration layer for the Libretro C ABI."""
 from __future__ import annotations
 import ctypes
 
-retro_video_refresh_t = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_size_t)
+retro_video_refresh_t = ctypes.CFUNCTYPE(
+    None, ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint, ctypes.c_size_t
+)
 retro_audio_sample_t = ctypes.CFUNCTYPE(None, ctypes.c_int16, ctypes.c_int16)
-retro_audio_sample_batch_t = ctypes.CFUNCTYPE(ctypes.c_size_t, ctypes.POINTER(ctypes.c_int16), ctypes.c_size_t)
+retro_audio_sample_batch_t = ctypes.CFUNCTYPE(
+    ctypes.c_size_t, ctypes.POINTER(ctypes.c_int16), ctypes.c_size_t
+)
 retro_input_poll_t = ctypes.CFUNCTYPE(None)
-retro_input_state_t = ctypes.CFUNCTYPE(ctypes.c_int16, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint)
+retro_input_state_t = ctypes.CFUNCTYPE(
+    ctypes.c_int16, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint, ctypes.c_uint
+)
 retro_environment_t = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_uint, ctypes.c_void_p)
 
 RETRO_ENVIRONMENT_SET_PIXEL_FORMAT = 10
 RETRO_PIXEL_FORMAT_0RGB1555 = 0
 RETRO_PIXEL_FORMAT_XRGB8888 = 1
 RETRO_PIXEL_FORMAT_RGB565 = 2
+
 
 class retro_game_info(ctypes.Structure):
     _fields_ = [
@@ -26,8 +29,10 @@ class retro_game_info(ctypes.Structure):
         ("meta", ctypes.c_char_p),
     ]
 
+
 class LibretroCallbacks:
     """Own callback objects so ctypes cannot garbage-collect active callbacks."""
+
     def __init__(self) -> None:
         self.frame_rendered = False
         self.last_video = None
@@ -44,12 +49,21 @@ class LibretroCallbacks:
             if not data:
                 return False
             fmt = ctypes.cast(data, ctypes.POINTER(ctypes.c_int)).contents.value
-            return fmt in (RETRO_PIXEL_FORMAT_0RGB1555, RETRO_PIXEL_FORMAT_XRGB8888, RETRO_PIXEL_FORMAT_RGB565)
+            return fmt in (
+                RETRO_PIXEL_FORMAT_0RGB1555,
+                RETRO_PIXEL_FORMAT_XRGB8888,
+                RETRO_PIXEL_FORMAT_RGB565,
+            )
         return False
 
     def video_refresh(self, data: int, width: int, height: int, pitch: int) -> None:
         self.frame_rendered = True
-        self.last_video = {"width": int(width), "height": int(height), "pitch": int(pitch), "has_data": bool(data)}
+        self.last_video = {
+            "width": int(width),
+            "height": int(height),
+            "pitch": int(pitch),
+            "has_data": bool(data),
+        }
 
     def audio_sample(self, left: int, right: int) -> None:
         self.audio_samples += 1
