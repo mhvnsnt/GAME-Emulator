@@ -8,7 +8,7 @@ from game_emulator.open_source_catalog_cli import installed_core_matches
 
 def test_catalog_entries_have_upstream_and_license_provenance():
     projects = list_projects()
-    assert len(projects) >= 14
+    assert len(projects) >= 18
     assert all(row["upstream_url"].startswith("https://") for row in projects)
     assert all(row["license_spdx"] for row in projects)
     assert all(row["status"] in {"catalogued", "upstream_candidate"} for row in projects)
@@ -110,3 +110,44 @@ def test_expanded_catalog_maps_snes_and_saturn_only_with_matching_extensions():
     assert {m["core_file"] for m in saturn["installed_metadata_matches"]} == {"beetle_saturn_libretro.so"}
     assert all(m["core_file"] != "wrong_extension_libretro.so" for m in saturn["installed_metadata_matches"])
     assert all(m["trust_status"] == "inventory_only_not_executed" for m in saturn["installed_metadata_matches"])
+
+
+
+def test_gba_and_dreamcast_candidates_use_upstream_extensions():
+    inventory = {
+        "cores": [
+            {
+                "file": "beetle_gba_libretro.so",
+                "display_name": "Beetle GBA",
+                "supported_systems": ["Nintendo - Game Boy Advance"],
+                "supported_extensions": ["gba", "agb", "bin"],
+                "sha256": "1" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "flycast_libretro.so",
+                "display_name": "Flycast",
+                "supported_systems": ["Sega - Dreamcast/NAOMI"],
+                "supported_extensions": ["cdi", "gdi", "chd", "cue", "bin", "elf", "zip"],
+                "sha256": "2" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "wrong_platform_libretro.so",
+                "display_name": "Wrong platform",
+                "supported_systems": ["Sega - Dreamcast/NAOMI"],
+                "supported_extensions": ["gba"],
+                "sha256": "3" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+        ]
+    }
+    matches = installed_core_matches(inventory)
+    gba = next(row for row in matches if row["project_id"] == "beetle-gba")
+    flycast = next(row for row in matches if row["project_id"] == "flycast")
+    assert {m["core_file"] for m in gba["installed_metadata_matches"]} == {"beetle_gba_libretro.so"}
+    assert {m["core_file"] for m in flycast["installed_metadata_matches"]} == {"flycast_libretro.so"}
+    assert all(m["core_file"] != "wrong_platform_libretro.so" for m in flycast["installed_metadata_matches"])
