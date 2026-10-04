@@ -1,4 +1,7 @@
-from game_emulator.open_source_catalog import get_project
+from game_emulator.open_source_catalog import (
+    get_project,
+    redistribution_eligibility,
+)
 from game_emulator.open_source_catalog_cli import installed_core_matches
 
 
@@ -10,11 +13,8 @@ def test_quicknes_and_sameboy_are_catalogued_with_conservative_licenses():
     assert quicknes is not None and quicknes.license_label.startswith("GPLv2")
     assert sameboy is not None and sameboy.license_label.startswith("MIT")
     assert scummvm is not None and ".scummvm" in scummvm.notes
-    assert all(
-        not __import__("game_emulator.open_source_catalog", fromlist=["redistribution_eligibility"])
-        .redistribution_eligibility(project_id)["eligible"]
-        for project_id in ("quicknes", "sameboy", "scummvm")
-    )
+    for project_id in ("quicknes", "sameboy", "scummvm"):
+        assert redistribution_eligibility(project_id)["eligible"] is False
 
 
 def test_quicknes_and_sameboy_only_match_exact_local_system_and_extension_metadata():
@@ -59,7 +59,7 @@ def test_quicknes_and_sameboy_only_match_exact_local_system_and_extension_metada
         row["core_file"]
         for row in matches["sameboy"]["installed_metadata_matches"]
     } == {"sameboy_libretro.so"}
-    assert "wrong_platform" not in {
+    assert "wrong_platform_libretro.so" not in {
         row["core_file"]
         for row in matches["sameboy"]["installed_metadata_matches"]
     }
