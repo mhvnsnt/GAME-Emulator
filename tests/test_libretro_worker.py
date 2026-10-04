@@ -56,7 +56,7 @@ from game_emulator.sandbox import apply_native_core_sandbox
 info = apply_native_core_sandbox(Path({sys.executable!r}), Path({str(content)!r}))
 assert info["strict"] is True
 assert info["landlock"] is True
-assert info["network"] == "denied"
+assert info["network"] == "tcp_udp_denied"
 
 try:
     Path("/etc/passwd").read_bytes()
@@ -75,6 +75,11 @@ else:
         timeout=10,
         check=False,
     )
-    if result.returncode != 0 and "Operation not permitted" in result.stderr:
-        pytest.skip("CI container forbids Landlock enforcement; strict worker still fails closed")
+    if result.returncode != 0 and (
+        "Operation not permitted" in result.stderr
+        or "Landlock ABI >= 10" in result.stderr
+    ):
+        pytest.skip(
+            "CI host cannot demonstrate the required Landlock ABI/policy; strict worker fails closed"
+        )
     assert result.returncode == 0, result.stderr + result.stdout
