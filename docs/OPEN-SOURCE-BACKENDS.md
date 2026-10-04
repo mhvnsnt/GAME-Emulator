@@ -24,6 +24,9 @@ not "installed", "runnable", or "certified".
 | Snes9x | Super Nintendo | Non-commercial in Libretro core inventory | Upstream candidate; redistribution requires permission review |
 | Gambatte | Game Boy / Game Boy Color | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | FCEUmm | NES / Famicom | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| QuickNES | NES / Famicom | GPLv2 (Libretro docs) | Upstream candidate; exact system + .nes metadata required |
+| SameBoy | Game Boy / Game Boy Color | MIT (Libretro docs) | Upstream candidate; exact system + .gb/.gbc metadata required |
+| ScummVM | Classic adventure game engines | License must be reconciled per build | Upstream candidate; uses .scummvm hooks and user-supplied game data |
 | Mesen | NES / Famicom | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
 | Mupen64Plus-Next | Nintendo 64 | Verify exact revision | Upstream candidate; local metadata required |
 | Beetle Saturn | Sega Saturn | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
@@ -43,6 +46,9 @@ entry is not proof of a compatible installed binary. Official references:
 - [mGBA upstream](https://github.com/mgba-emu/mgba)
 - [Nestopia UE upstream](https://github.com/libretro/nestopia)
 - [Beetle PSX upstream](https://github.com/libretro/beetle-psx-libretro)
+- [Official QuickNES core documentation](https://docs.libretro.com/library/quicknes/)
+- [Official SameBoy core documentation](https://docs.libretro.com/library/sameboy/)
+- [Official ScummVM core documentation](https://docs.libretro.com/library/scummvm/)
 - [Official MesenCE Libretro documentation](https://docs.libretro.com/library/mesen2/)
 - [Official Flycast Libretro documentation](https://docs.libretro.com/library/flycast/)
 - [Official Beetle GBA Libretro documentation](https://docs.libretro.com/library/beetle_gba/)
@@ -54,10 +60,12 @@ entry is not proof of a compatible installed binary. Official references:
 The catalog intentionally marks every project as **not cleared for redistribution**
 until a human reviews the exact release, its dependencies, bundled assets, notices,
 and license terms. A project-level license label can be incomplete or can differ
-from the license of a particular binary, dependency, or asset. Some projects in the
-wider Libretro ecosystem are explicitly non-commercial; do not vendor or package
-those into a commercial product without separate permission. Unknown or custom
-license identifiers are not treated as permissive licenses.
+from the license of a particular binary, dependency, or asset. The Libretro license
+inventory and an individual core page can disagree (ScummVM is one example), so
+the exact source revision and packaged binary license must be reconciled. Some
+projects are explicitly non-commercial; do not vendor or package those into a
+commercial product without separate permission. Unknown or custom license
+identifiers are not treated as permissive licenses.
 
 ## Integration rule
 
