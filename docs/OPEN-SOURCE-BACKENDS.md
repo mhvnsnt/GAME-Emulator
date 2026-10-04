@@ -3,16 +3,46 @@
 GAME: Emulator treats emulator projects as external backends. We do not copy their
 ROMs, BIOS files, keys, firmware, or proprietary game content into this repository.
 
-| Backend | Coverage | License | Integration |
-|---|---|---|---|
-| RetroArch / Libretro | Broad multi-system core ecosystem | RetroArch GPL-3.0; Libretro API MIT | Installed-core inventory + isolated ctypes worker |
-| Dolphin | GameCube / Wii | GPL-2.0-or-later | Capability registry; dedicated launcher next |
-| PCSX2 | PlayStation 2 | GPL-3.0-or-later | Capability registry; dedicated launcher next |
-| PPSSPP | PlayStation Portable | GPL-2.0-or-later | Capability registry; dedicated launcher next |\n| Azahar | Nintendo 3DS | GPL-2.0-or-later | Capability registry; dedicated launcher next |\n| Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection; Android launch adapter next |
+## Curated upstream catalog
 
-The Libretro core catalog already includes examples for PlayStation, GameCube/Wii,
-Xbox, PSP, Dreamcast, Nintendo handhelds/consoles and many other systems. PPSSPP is also available as a standalone open-source PSP runtime, and Azahar is an open-source 3DS emulator project. Core
-selection remains metadata- and installation-driven.
+`src/game_emulator/open_source_catalog.py` records upstream project URLs, target
+systems, integration type, conservative license labels, and intake notes. It is
+metadata only: it downloads nothing, installs nothing, and executes no native code.
+The catalog's `upstream_candidate` status means "research/integration candidate",
+not "installed", "runnable", or "certified".
+
+| Backend/project | Coverage | License recorded | Integration status |
+|---|---|---|---|
+| RetroArch | Multi-system frontend | GPL-3.0-only | Catalogued; requires a compatible core |
+| Dolphin | GameCube / Wii | GPL-2.0-or-later | Catalogued; launcher/security work remains |
+| PCSX2 | PlayStation 2 | GPL-3.0-or-later | Catalogued; launcher/security work remains |
+| PPSSPP | PSP | GPL-2.0-or-later | Catalogued; launcher/security work remains |
+| Azahar | Nintendo 3DS | GPL-2.0-or-later | Catalogued; current CLI launch intentionally disabled |
+| mGBA | Game Boy / Game Boy Color / Game Boy Advance | MPL-2.0 | Upstream candidate; requires installed core/metadata |
+| Nestopia UE | NES | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
+| Beetle PSX | PlayStation | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
+| Snes9x | Super Nintendo | Snes9x-specific terms | Upstream candidate; manual license review required |
+| Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection only; no host execution |
+
+The upstream Libretro core catalog lists many more systems and cores, but a catalog
+entry is not proof of a compatible installed binary. Official references:
+
+- [Libretro core list](https://docs.libretro.com/guides/core-list/)
+- [Libretro license inventory, including non-commercial entries](https://docs.libretro.com/development/licenses/)
+- [RetroArch upstream](https://github.com/libretro/RetroArch)
+- [mGBA upstream](https://github.com/mgba-emu/mgba)
+- [Nestopia UE upstream](https://github.com/libretro/nestopia)
+- [Beetle PSX upstream](https://github.com/libretro/beetle-psx-libretro)
+
+## License and provenance gate
+
+The catalog intentionally marks every project as **not cleared for redistribution**
+until a human reviews the exact release, its dependencies, bundled assets, notices,
+and license terms. A project-level license label can be incomplete or can differ
+from the license of a particular binary, dependency, or asset. Some projects in the
+wider Libretro ecosystem are explicitly non-commercial; do not vendor or package
+those into a commercial product without separate permission. Unknown or custom
+license identifiers are not treated as permissive licenses.
 
 ## Integration rule
 
@@ -21,11 +51,12 @@ For every new backend:
 1. verify the upstream project and current license;
 2. record its supported systems and input/content formats;
 3. detect an installed runtime without executing it;
-4. define a deterministic non-shell launch contract;
-5. put the runtime behind the appropriate OS sandbox boundary;
-6. add a synthetic adapter test;
-7. add an opt-in real smoke test using only locally installed, authorized content;
-8. never download proprietary BIOS, firmware, keys, ROMs, ISOs, APKs, or game data.
+4. match the installed core's metadata against both system and extension;
+5. define a deterministic non-shell launch contract;
+6. put the runtime behind a verified OS sandbox policy before execution;
+7. add synthetic adapter tests;
+8. add an opt-in real smoke test using only locally installed, authorized content;
+9. never download proprietary BIOS, firmware, keys, ROMs, ISOs, APKs, or game data.
 
 ## Modern platforms
 
