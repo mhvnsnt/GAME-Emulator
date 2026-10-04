@@ -12,9 +12,9 @@ treated as proof when the format is ambiguous.
 from __future__ import annotations
 
 import shutil
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 
 @dataclass(frozen=True)
@@ -98,9 +98,12 @@ def candidates(
     for backend in BACKENDS:
         system_match = not backend.systems or system in backend.systems
         extension_match = not backend.extensions or extension in backend.extensions
-        if system_match and extension_match:
-            if not installed_only or backend.installed_executable() is not None:
-                matches.append(backend)
+        if (
+            system_match
+            and extension_match
+            and (not installed_only or backend.installed_executable() is not None)
+        ):
+            matches.append(backend)
     return matches
 
 
