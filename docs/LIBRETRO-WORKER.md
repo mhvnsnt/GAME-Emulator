@@ -5,12 +5,14 @@ catalog, and parent orchestration process never calls `ctypes.CDLL()`.
 
 ## Process boundary
 
-The parent uses Python `multiprocessing`, explicitly selecting the `spawn`
-context so the worker does not inherit the parent's ordinary process state and
-file descriptors. The IPC pipe is created before the worker starts and is the
-only intended control channel.
+The parent uses Python `multiprocessing` with the `spawn` context. Spawn is
+useful for avoiding a forked copy of the parent's memory, but it still inherits
+the process environment and is **not a security boundary by itself**.
 
-This is **fault isolation**, not a security boundary by itself.
+The worker control pipe uses bounded UTF-8 JSON bytes. It deliberately does not
+use `Connection.send()` / `recv()` or pickle: a compromised native core must
+not be able to send a crafted pickle that executes code when the parent decodes
+a worker response. Malformed or oversized messages fail closed.
 
 ## OS security boundary
 
@@ -26,15 +28,18 @@ Linux strict mode uses Landlock plus `PR_SET_NO_NEW_PRIVS`:
 - the content directory is read-only;
 - filesystem writes, creation, deletion, and truncation handled by the
   available Landlock ABI are denied;
-- TCP/UDP bind/connect operations supported by the installed Landlock ABI are
-  denied because no network rules are granted;
-- abstract UNIX-socket connections are scoped when the ABI supports it;
+- strict mode requires Landlock ABI >= 10 before claiming TCP/UDP denial; no
+  network rules are granted, so supported TCP and UDP operations are denied;
+- pathname UNIX-socket resolution and abstract UNIX-socket/signal scoping are
+  restricted when supported by the ABI;
 - CPU, address-space, file-size, descriptor-count, process-count, and core-dump
   limits are lowered with POSIX resource limits.
 
-The policy is **fail-closed** if Landlock is unavailable. It does not claim to
-be a complete container: system calls not covered by Landlock remain subject to
-normal kernel permissions. A future Linux launcher can add bubblewrap/seccomp
+The policy is **fail-closed** if Landlock is unavailable or below ABI 10. It does
+not claim to be a complete container: system calls not covered by Landlock remain
+subject to normal kernel permissions. CI currently cannot exercise this strict
+path because its Landlock ABI is below the required version, so the host-isolation
+integration test skips there. A future Linux launcher can add bubblewrap/seccomp
 for an even smaller syscall/namespace surface.
 
 ### Windows
@@ -71,8 +76,9 @@ on the worker instance for the native-core lifetime.
 
 ## Explicit development escape hatch
 
-`GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE=1` exists only for development/debugging.
-Strict worker execution does not use it. Production code should never set it.
+`GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE=1` can only request a non-strict
+development path. Strict worker execution rejects this override and cannot be
+downgraded by setting the environment variable. Production code should never set it.
 
 ## Real one-frame integration test
 
