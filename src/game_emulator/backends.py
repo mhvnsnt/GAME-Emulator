@@ -59,6 +59,20 @@ BACKENDS: tuple[Backend, ...] = (
         source_url="https://github.com/PCSX2/pcsx2",
     ),
     Backend(
+        "ppsspp", "PPSSPP", "standalone",
+        frozenset({"Sony PlayStation Portable"}),
+        frozenset({".iso", ".cso", ".pbp", ".chd"}),
+        ("ppsspp", "PPSSPPQt"), license="GPL-2.0-or-later",
+        source_url="https://github.com/hrydgard/ppsspp",
+    ),
+    Backend(
+        "azahar", "Azahar", "standalone",
+        frozenset({"Nintendo 3DS"}),
+        frozenset({".3ds", ".3dsx", ".cci", ".cxi", ".app"}),
+        ("azahar", "azahar-qt"), license="GPL-2.0-or-later",
+        source_url="https://github.com/azahar-emu/azahar",
+    ),
+    Backend(
         "android-runtime", "Android runtime", "android_runtime",
         frozenset({"Android"}),
         frozenset({".apk", ".xapk", ".apks"}),
