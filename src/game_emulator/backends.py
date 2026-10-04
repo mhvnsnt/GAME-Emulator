@@ -5,9 +5,9 @@ It discovers software the user has installed and routes content to a compatible
 backend. Libretro cores are discovered from .info metadata; standalone backends
 are detected by executable path.
 
-A backend is only considered runnable when its local executable/core exists and
-the content format/system matches its declared capability. No file extension is
-treated as proof when the format is ambiguous.
+A backend is only considered a content candidate when its declared system and
+extension capabilities match. Generic frontends such as RetroArch must first be
+paired with a compatible core; empty capability sets are never treated as wildcards.
 """
 from __future__ import annotations
 
@@ -110,8 +110,9 @@ def candidates(
     extension = extension.lower()
     matches = []
     for backend in BACKENDS:
-        system_match = not backend.systems or system in backend.systems
-        extension_match = not backend.extensions or extension in backend.extensions
+        # Empty sets mean "not a content backend" rather than "supports everything".
+        system_match = bool(backend.systems) and system in backend.systems
+        extension_match = bool(backend.extensions) and extension in backend.extensions
         if (
             system_match
             and extension_match
@@ -122,11 +123,11 @@ def candidates(
 
 
 def validate_backend_selection(backend: Backend, *, system: str, extension: str) -> None:
-    if backend.systems and system not in backend.systems:
+    if not backend.systems or system not in backend.systems:
         raise ValueError(
             f"{backend.display_name} does not declare support for {system}"
         )
-    if backend.extensions and extension.lower() not in backend.extensions:
+    if not backend.extensions or extension.lower() not in backend.extensions:
         raise ValueError(
             f"{backend.display_name} does not declare support for {extension.lower()}"
         )
