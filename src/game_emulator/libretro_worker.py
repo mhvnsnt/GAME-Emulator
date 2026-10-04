@@ -9,7 +9,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
 
-from .sandbox import SandboxPolicy, apply_native_core_sandbox\n\nfrom .libretro_abi import (
+from .libretro_abi import (
     LibretroCallbacks,
     retro_audio_sample_batch_t,
     retro_audio_sample_t,
@@ -19,6 +19,7 @@ from .sandbox import SandboxPolicy, apply_native_core_sandbox\n\nfrom .libretro_
     retro_input_state_t,
     retro_video_refresh_t,
 )
+from .sandbox import SandboxPolicy, apply_native_core_sandbox
 
 
 class WorkerError(RuntimeError):
@@ -31,9 +32,17 @@ class LibretroWorker:
         self.callbacks = LibretroCallbacks()
         self.core = None
         self._content_path_bytes = None
+        self.sandbox_info: dict[str, Any] | None = None
 
     def load(self, content_path: str) -> bool:
+        content = Path(content_path).expanduser().resolve(strict=True)
         if self.core is None:
+            # Security boundary: this must succeed before ctypes.CDLL/dlopen.
+            self.sandbox_info = apply_native_core_sandbox(
+                Path(self.core_path),
+                content,
+                SandboxPolicy(strict=True),
+            )
             self.core = ctypes.CDLL(self.core_path)
             required = (
                 "retro_set_environment",
@@ -83,7 +92,7 @@ class LibretroWorker:
             self.core.retro_set_input_state(self.callbacks.cb_input_state)
             self.core.retro_init()
 
-        path_bytes = str(Path(content_path).expanduser().resolve(strict=True)).encode()
+        path_bytes = str(content).encode()
         self._content_path_bytes = path_bytes
         info = retro_game_info(path=path_bytes, data=None, size=0, meta=None)
         return bool(self.core.retro_load_game(ctypes.byref(info)))
@@ -119,7 +128,12 @@ def run_worker(conn: Connection, core_path: str) -> None:
             if command == "LOAD":
                 try:
                     ok = worker.load(message["path"])
-                    conn.send({"status": "LOADED" if ok else "FAILED"})
+                    conn.send(
+                        {
+                            "status": "LOADED" if ok else "FAILED",
+                            "sandbox": worker.sandbox_info,
+                        }
+                    )
                 except Exception as exc:
                     conn.send(
                         {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
