@@ -11,22 +11,49 @@ from pathlib import Path
 from game_emulator.adapters import compatible_cores, inventory_cores
 from game_emulator.open_source_catalog import list_projects, redistribution_eligibility
 
-# Explicit aliases bridge human-facing catalog labels to names emitted by
-# Libretro .info files. A match requires BOTH system and at least one known
-# extension; a core's filename is never treated as proof of compatibility.
+# These are curated targets based on upstream Libretro core documentation.
+# Actual local .info metadata remains authoritative: BOTH system and extension
+# must match. This table is a discovery aid, not a claim that a core is installed.
 LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "mgba": (
         ("Nintendo Game Boy Advance", ("gba",)),
         ("Nintendo Game Boy Color", ("gbc",)),
         ("Nintendo Game Boy", ("gb",)),
     ),
+    "gambatte": (
+        ("Nintendo Game Boy", ("gb",)),
+        ("Nintendo Game Boy Color", ("gbc",)),
+        ("Game Boy/Color", ("gb", "gbc")),
+    ),
     "nestopia": (
         ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
         ("Nintendo Entertainment System", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
         ("Nintendo Famicom Disk System", ("fds",)),
+    ),
+    "fceumm": (
+        ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo Famicom Disk System", ("fds",)),
+    ),
+    "mesen": (
+        ("Nintendo NES", ("nes", "unf", "unif", "nsf")),
+        ("Nintendo NES/Famicom", ("nes", "unf", "unif", "nsf")),
+    ),
+    "snes9x": (
+        ("Nintendo Super Nintendo Entertainment System", ("sfc", "smc")),
+        ("Nintendo SNES/SFC", ("sfc", "smc", "swc", "fig", "bs", "st")),
+        ("Nintendo Sufami Turbo", ("st",)),
     ),
     "beetle-psx": (
         ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u")),
+    ),
+    "beetle-saturn": (
+        ("Sega Saturn", ("cue", "toc", "m3u", "ccd", "chd")),
+    ),
+    "mupen64plus-next": (
+        ("Nintendo 64", ("n64", "z64", "v64")),
+        ("Nintendo - Nintendo 64", ("n64", "z64", "v64")),
     ),
 }
 
