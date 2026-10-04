@@ -15,6 +15,7 @@ from __future__ import annotations
 import ctypes
 import os
 import platform
+
 try:
     import resource
 except ImportError:  # pragma: no cover - Windows
