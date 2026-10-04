@@ -8,7 +8,7 @@ from game_emulator.open_source_catalog_cli import installed_core_matches
 
 def test_catalog_entries_have_upstream_and_license_provenance():
     projects = list_projects()
-    assert len(projects) >= 18
+    assert len(projects) >= 19
     assert all(row["upstream_url"].startswith("https://") for row in projects)
     assert all(row["license_spdx"] for row in projects)
     assert all(row["status"] in {"catalogued", "upstream_candidate"} for row in projects)
@@ -151,3 +151,32 @@ def test_gba_and_dreamcast_candidates_use_upstream_extensions():
     assert {m["core_file"] for m in gba["installed_metadata_matches"]} == {"beetle_gba_libretro.so"}
     assert {m["core_file"] for m in flycast["installed_metadata_matches"]} == {"flycast_libretro.so"}
     assert all(m["core_file"] != "wrong_platform_libretro.so" for m in flycast["installed_metadata_matches"])
+
+
+
+def test_mesence_multi_system_matching_still_uses_local_metadata():
+    inventory = {
+        "cores": [
+            {
+                "file": "mesence_libretro.so",
+                "display_name": "MesenCE",
+                "supported_systems": [
+                    "Nintendo - Nintendo Entertainment System",
+                    "Nintendo - Game Boy Advance",
+                ],
+                "supported_extensions": ["nes", "fds", "unf", "unif", "gba"],
+                "sha256": "4" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            }
+        ]
+    }
+    matches = installed_core_matches(inventory)
+    mesence = next(row for row in matches if row["project_id"] == "mesence")
+    assert {m["core_file"] for m in mesence["installed_metadata_matches"]} == {
+        "mesence_libretro.so"
+    }
+    assert {m["system"] for m in mesence["installed_metadata_matches"]} >= {
+        "Nintendo - Nintendo Entertainment System",
+        "Nintendo Game Boy Advance",
+    }
