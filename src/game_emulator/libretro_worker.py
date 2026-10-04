@@ -19,6 +19,7 @@ from .libretro_abi import (
     retro_input_state_t,
     retro_video_refresh_t,
 )
+from .ipc_protocol import receive_message, send_message
 from .sandbox import SandboxPolicy, apply_native_core_sandbox
 
 
@@ -121,37 +122,38 @@ class LibretroWorker:
 def run_worker(conn: Connection, core_path: str) -> None:
     worker = LibretroWorker(core_path)
     try:
-        conn.send({"status": "READY"})
+        send_message(conn, {"status": "READY"})
         while True:
-            message = conn.recv()
+            message = receive_message(conn)
             command = message.get("cmd")
             if command == "LOAD":
                 try:
                     ok = worker.load(message["path"])
-                    conn.send(
+                    send_message(
+                        conn,
                         {
                             "status": "LOADED" if ok else "FAILED",
                             "sandbox": worker.sandbox_info,
-                        }
+                        },
                     )
                 except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
-                    conn.send(
-                        {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
+                    send_message(
+                        conn, {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
                     )
             elif command == "TICK":
                 try:
                     result = worker.tick()
-                    conn.send({"status": "TICK_COMPLETE", **result})
+                    send_message(conn, {"status": "TICK_COMPLETE", **result})
                 except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
                     conn.send(
                         {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
                     )
             elif command == "SHUTDOWN":
                 worker.shutdown()
-                conn.send({"status": "SHUTDOWN"})
+                send_message(conn, {"status": "SHUTDOWN"})
                 return
             else:
-                conn.send({"status": "ERROR", "error": "unknown command"})
+                send_message(conn, {"status": "ERROR", "error": "unknown command"})
     except (EOFError, BrokenPipeError):
         return
     finally:
@@ -169,10 +171,10 @@ def main() -> None:
     process.start()
     child.close()
     try:
-        print(json.dumps(parent.recv()))
+        print(json.dumps(receive_message(parent)))
         for line in sys.stdin:
-            parent.send(json.loads(line))
-            print(json.dumps(parent.recv()), flush=True)
+            send_message(parent, json.loads(line))
+            print(json.dumps(receive_message(parent)), flush=True)
     finally:
         if process.is_alive():
             process.terminate()
