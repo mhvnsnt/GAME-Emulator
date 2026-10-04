@@ -27,3 +27,12 @@ def test_standalone_command_is_explicit():
         "-e",
         "game.bin",
     ]
+
+
+def test_ppsspp_and_azahar_are_declared_for_their_systems():
+    psp = {b.backend_id for b in candidates(system="Sony PlayStation Portable", extension=".iso")}
+    three_ds = {b.backend_id for b in candidates(system="Nintendo 3DS", extension=".3ds")}
+    assert "ppsspp" in psp
+    assert "pcsx2" not in psp
+    assert "azahar" in three_ds
+    assert "dolphin" not in three_ds
