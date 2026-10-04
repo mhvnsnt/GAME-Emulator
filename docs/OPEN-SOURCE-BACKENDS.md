@@ -21,15 +21,20 @@ not "installed", "runnable", or "certified".
 | mGBA | Game Boy / Game Boy Color / Game Boy Advance | MPL-2.0 | Upstream candidate; requires installed core/metadata |
 | Nestopia UE | NES | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
 | Beetle PSX | PlayStation | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
-| Snes9x | Super Nintendo | Non-commercial in Libretro core inventory | Upstream candidate; redistribution requires permission review |\n| Gambatte | Game Boy / Game Boy Color | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| FCEUmm | NES / Famicom | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| Mesen | NES / Famicom | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |\n| Mupen64Plus-Next | Nintendo 64 | Verify exact revision | Upstream candidate; local metadata required |\n| Beetle Saturn | Sega Saturn | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| Snes9x | Super Nintendo | Non-commercial in Libretro core inventory | Upstream candidate; redistribution requires permission review |
+| Gambatte | Game Boy / Game Boy Color | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| FCEUmm | NES / Famicom | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| Mesen | NES / Famicom | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
+| Mupen64Plus-Next | Nintendo 64 | Verify exact revision | Upstream candidate; local metadata required |
+| Beetle Saturn | Sega Saturn | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | Beetle GBA | Game Boy Advance | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | Beetle bsnes | Super Nintendo | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | Mesen-S | SNES / Game Boy / Game Boy Color | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
-| Flycast | Dreamcast / NAOMI | GPLv2 | Upstream candidate; local metadata required |
+| Flycast | Dreamcast / NAOMI | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | MesenCE | NES / FDS / SNES / GB / GBC / GBA / PC Engine / Master System / Game Gear / WonderSwan | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
 | Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection only; no host execution |
 
-The upstream Libretro core catalog lists many more systems and cores, but a catalog
+The official Libretro core catalog lists many more systems and cores, but a catalog
 entry is not proof of a compatible installed binary. Official references:
 
 - [Libretro core list](https://docs.libretro.com/guides/core-list/)
@@ -79,14 +84,13 @@ verified and its execution contract can be sandboxed.
 This distinction is intentional: "recognized", "supported by a backend", and
 "verified runnable on this machine" are three different states.
 
-
 ## Linux containment gate
 
-The Libretro worker's strict Linux path requires Landlock ABI >= 8 for process-wide thread-synchronized TCP
-restrictions and installs a seccomp-BPF filter that denies socket/network syscalls,
-including UDP on kernels whose Landlock ABI cannot restrict UDP. It also applies
-process resource limits and `no_new_privs`. This is not a claim that every host
-interface is unavailable. CI's integration test attempts to demonstrate blocked
-host-file reads, filesystem writes, and TCP connects; it skips when the host denies
-the required thread-synchronized policy. A successful test on a supported host is required before
-native launch can be certified.
+The Libretro worker's strict Linux path requires Landlock ABI >= 8 for process-wide
+thread-synchronized filesystem restrictions and installs a seccomp-BPF filter that
+denies socket/network syscalls, including UDP where Landlock cannot restrict it.
+It also applies process resource limits and `no_new_privs`. This is not a claim
+that every host interface is unavailable. CI integration tests attempt to
+demonstrate blocked host-file reads, filesystem writes, and TCP connects; they skip
+when the host denies the required policy. A successful test on a supported host is
+required before native launch can be certified.
