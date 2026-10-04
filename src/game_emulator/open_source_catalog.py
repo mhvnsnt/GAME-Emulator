@@ -79,6 +79,21 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
         "Candidate coverage is metadata-driven; FDS extension support must match installed .info metadata.",
     ),
     OpenSourceProject(
+        "quicknes", "QuickNES", ("Nintendo NES",), "libretro_core",
+        "https://github.com/libretro/QuickNES_Core", "GPLv2 (Libretro core docs)", "upstream_candidate",
+        "Official Libretro docs list .nes content; local system and extension metadata must both match.",
+    ),
+    OpenSourceProject(
+        "sameboy", "SameBoy", ("Nintendo Game Boy", "Nintendo Game Boy Color"), "libretro_core",
+        "https://github.com/libretro/SameBoy", "MIT (Libretro core docs)", "upstream_candidate",
+        "Official Libretro docs list .gb and .gbc; exact release dependencies still need review.",
+    ),
+    OpenSourceProject(
+        "scummvm", "ScummVM", ("classic adventure game engines",), "libretro_core_or_standalone",
+        "https://github.com/scummvm/scummvm", "GPLv2 (Libretro core docs; verify exact build)", "upstream_candidate",
+        "Libretro core uses .scummvm launch-hook files and user-supplied game data; not a generic ROM core.",
+    ),
+    OpenSourceProject(
         "mesen", "Mesen", ("Nintendo NES",), "libretro_core",
         "https://github.com/SourMesen/Mesen", "GPLv3 (verify exact revision)", "upstream_candidate",
         "Core may support additional systems; only explicit system/extension metadata is matched.",
