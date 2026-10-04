@@ -12,8 +12,8 @@ memory, or game-specific transformation support when a backend proves it.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Literal
+from dataclasses import dataclass, field
 
 
 BlendMode = Literal["side_by_side", "overlay", "picture_in_picture"]
