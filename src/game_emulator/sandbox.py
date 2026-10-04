@@ -36,6 +36,7 @@ class SandboxPolicy:
     max_file_size: int = 8 * 1024 * 1024
     max_open_files: int = 256
     max_processes: int = 64
+    read_only_paths: tuple[Path, ...] = ()
 
 
 # Linux Landlock constants.  The syscall numbers are stable for the supported
@@ -209,6 +210,13 @@ def _readable_system_roots() -> list[Path]:
     return [root for root in roots if root.exists()]
 
 
+def _readable_system_files() -> list[Path]:
+    # The dynamic loader may consult this cache while resolving a core's
+    # shared-library dependencies after Landlock is enforced.
+    files = [Path("/etc/ld.so.cache")]
+    return [path for path in files if path.is_file() and not path.is_symlink()]
+
+
 def _add_path_rule(
     add_rule_syscall: int, ruleset_fd: int, path: Path, allowed_access: int
 ) -> None:
@@ -237,7 +245,11 @@ def _add_path_rule(
         os.close(fd)
 
 
-def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
+def _apply_linux_landlock(
+    core_path: Path,
+    content_path: Path,
+    read_only_paths: tuple[Path, ...] = (),
+) -> int:
     abi, (create, add_rule, restrict) = _landlock_abi()
     # Landlock ABI 4 provides TCP restrictions. Seccomp below blocks socket
     # creation and network syscalls including UDP on older kernels.
@@ -302,6 +314,15 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
         # read-only and executable; no write access is ever granted.
         for root in _readable_system_roots():
             _add_path_rule(add_rule, ruleset_fd, root, read_access | execute_access)
+        for system_file in _readable_system_files():
+            _add_path_rule(add_rule, ruleset_fd, system_file, _LANDLOCK_ACCESS_FS_READ_FILE)
+        for extra_path in read_only_paths:
+            if extra_path.is_dir():
+                _add_path_rule(add_rule, ruleset_fd, extra_path, read_access)
+            else:
+                _add_path_rule(
+                    add_rule, ruleset_fd, extra_path, _LANDLOCK_ACCESS_FS_READ_FILE
+                )
 
         # The core directory is exposed read/execute only. Content is exposed
         # read-only through its containing directory so normal path resolution
@@ -482,6 +503,15 @@ def apply_native_core_sandbox(
     policy = policy or SandboxPolicy()
     core_path = Path(core_path).resolve(strict=True)
     content_path = Path(content_path).resolve(strict=True)
+    read_only_paths: list[Path] = []
+    for raw_path in policy.read_only_paths:
+        candidate = Path(raw_path).expanduser()
+        if candidate.is_symlink():
+            raise SandboxError(f"additional read-only path may not be a symlink: {candidate}")
+        resolved = candidate.resolve(strict=True)
+        if not resolved.is_file() and not resolved.is_dir():
+            raise SandboxError(f"additional read-only path is not a file or directory: {resolved}")
+        read_only_paths.append(resolved)
 
     if os.environ.get("GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE") == "1":
         if policy.strict:
@@ -494,7 +524,7 @@ def apply_native_core_sandbox(
     _apply_unix_limits(policy) if system in {"Linux", "Darwin"} else None
 
     if system == "Linux":
-        abi = _apply_linux_landlock(core_path, content_path)
+        abi = _apply_linux_landlock(core_path, content_path, tuple(read_only_paths))
         _apply_linux_network_seccomp()
         return {
             "platform": system,
