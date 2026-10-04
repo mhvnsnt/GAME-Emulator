@@ -26,7 +26,7 @@ class SandboxLauncher:
     separator: str = "--"
 
     @classmethod
-    def from_spec(cls, spec: str) -> "SandboxLauncher":
+    def from_spec(cls, spec: str) -> SandboxLauncher:
         parts = shlex.split(spec)
         if not parts:
             raise LaunchSandboxError("sandbox launcher specification is empty")
