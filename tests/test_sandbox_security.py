@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-import game_emulator.sandbox as sandbox
+from game_emulator import sandbox
 
 
 def test_landlock_strict_policy_rejects_abi_without_udp_restriction(monkeypatch):
