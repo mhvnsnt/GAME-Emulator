@@ -9,6 +9,7 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
 
+from .ipc_protocol import receive_message, send_message
 from .libretro_abi import (
     LibretroCallbacks,
     retro_audio_sample_batch_t,
@@ -19,7 +20,6 @@ from .libretro_abi import (
     retro_input_state_t,
     retro_video_refresh_t,
 )
-from .ipc_protocol import receive_message, send_message
 from .sandbox import SandboxPolicy, apply_native_core_sandbox
 
 
