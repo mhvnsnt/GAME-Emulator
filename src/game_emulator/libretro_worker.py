@@ -145,8 +145,8 @@ def run_worker(conn: Connection, core_path: str) -> None:
                     result = worker.tick()
                     send_message(conn, {"status": "TICK_COMPLETE", **result})
                 except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
-                    conn.send(
-                        {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
+                    send_message(
+                        conn, {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
                     )
             elif command == "SHUTDOWN":
                 worker.shutdown()
