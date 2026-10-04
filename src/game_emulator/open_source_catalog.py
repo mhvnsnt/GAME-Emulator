@@ -93,6 +93,26 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
         "https://github.com/libretro-mirrors/beetle-saturn-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
         "Disc formats and firmware requirements must be checked against installed metadata and official docs.",
     ),
+    OpenSourceProject(
+        "beetle-gba", "Beetle GBA", ("Nintendo Game Boy Advance",), "libretro_core",
+        "https://github.com/libretro/beetle-gba-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Official Libretro docs list .gba, .agb, and .bin; firmware needs are build/options dependent.",
+    ),
+    OpenSourceProject(
+        "beetle-bsnes", "Beetle bsnes", ("Nintendo Super Nintendo Entertainment System",), "libretro_core",
+        "https://github.com/libretro/beetle-bsnes-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Legacy core candidate; match local system and extension metadata before offering it.",
+    ),
+    OpenSourceProject(
+        "mesen-s", "Mesen-S", ("Nintendo Super Nintendo Entertainment System", "Nintendo Game Boy", "Nintendo Game Boy Color"), "libretro_core",
+        "https://github.com/SourMesen/Mesen", "GPLv3 (verify exact revision)", "upstream_candidate",
+        "Official Libretro docs list SNES/SFC, Game Boy, and Game Boy Color coverage.",
+    ),
+    OpenSourceProject(
+        "flycast", "Flycast", ("Sega Dreamcast / NAOMI",), "libretro_core",
+        "https://github.com/flyinghead/flycast", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Official Libretro docs list Dreamcast/NAOMI/Atomiswave; match local extensions and system metadata.",
+    ),
 )
 
 
