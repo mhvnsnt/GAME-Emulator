@@ -403,12 +403,16 @@ def _apply_linux_network_seccomp(*, synchronize_threads: bool = True) -> None:
                 f"seccomp TSYNC could not synchronize thread id {result}"
             )
     else:
-        result = _syscall(
-            _PR_SET_SECCOMP,
-            _SECCOMP_MODE_FILTER,
-            ctypes.byref(program),
-            0,
-            0,
+        libc = _libc()
+        libc.prctl.restype = ctypes.c_int
+        result = int(
+            libc.prctl(
+                _PR_SET_SECCOMP,
+                _SECCOMP_MODE_FILTER,
+                ctypes.byref(program),
+                0,
+                0,
+            )
         )
     if result != 0:
         err = ctypes.get_errno()
