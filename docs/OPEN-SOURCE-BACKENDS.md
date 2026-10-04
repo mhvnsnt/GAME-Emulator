@@ -82,11 +82,11 @@ This distinction is intentional: "recognized", "supported by a backend", and
 
 ## Linux containment gate
 
-The Libretro worker's strict Landlock path now requires ABI 10 before it reports
-TCP/UDP network denial. Older Landlock versions may restrict TCP while leaving UDP
-available, so they fail closed instead of being labeled as network-isolated.
-The worker also applies process resource limits and `no_new_privs`; this is not a
-claim that all host interfaces are unavailable. CI's mocked policy tests validate
-the fail-closed decision and reported status, not actual kernel containment. A real
-containment test must run in a host where Landlock is permitted and demonstrate
-blocked filesystem writes and network access before native launch can be certified.
+The Libretro worker's strict Linux path requires Landlock ABI >= 4 for TCP
+restrictions and installs a seccomp-BPF filter that denies socket/network syscalls,
+including UDP on kernels whose Landlock ABI cannot restrict UDP. It also applies
+process resource limits and `no_new_privs`. This is not a claim that every host
+interface is unavailable. CI's integration test attempts to demonstrate blocked
+host-file reads, filesystem writes, and TCP connects; it skips when the host denies
+the required policy. A successful test on a supported host is required before
+native launch can be certified.
