@@ -10,7 +10,7 @@ def test_catalog_entries_have_upstream_and_license_provenance():
     projects = list_projects()
     assert len(projects) >= 19
     assert all(row["upstream_url"].startswith("https://") for row in projects)
-    assert all(row["license_spdx"] for row in projects)
+    assert all(row["license_label"] for row in projects)
     assert all(row["status"] in {"catalogued", "upstream_candidate"} for row in projects)
 
 
