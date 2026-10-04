@@ -5,6 +5,7 @@ import multiprocessing as mp
 from pathlib import Path
 from typing import Any
 
+from .ipc_protocol import IPCProtocolError, receive_message, send_message
 from .libretro_worker import run_worker
 
 
@@ -33,7 +34,11 @@ class IsolatedCore:
         if not self.parent.poll(timeout):
             self.close(force=True)
             raise CoreTimeout("worker did not become ready")
-        result = self.parent.recv()
+        try:
+            result = receive_message(self.parent)
+        except (EOFError, OSError, IPCProtocolError) as exc:
+            self.close(force=True)
+            raise CoreCrashed("worker returned an invalid startup message") from exc
         if result.get("status") != "READY":
             self.close(force=True)
             raise CoreCrashed(str(result))
@@ -44,12 +49,16 @@ class IsolatedCore:
             raise RuntimeError("worker is not started")
         if not self.process.is_alive():
             raise CoreCrashed(f"worker exited with code {self.process.exitcode}")
-        self.parent.send(message)
+        send_message(self.parent, message)
         if not self.parent.poll(timeout):
             if not self.process.is_alive():
                 raise CoreCrashed(f"worker crashed; exit code {self.process.exitcode}")
             raise CoreTimeout(f"worker timed out after {timeout}s")
-        return self.parent.recv()
+        try:
+            return receive_message(self.parent)
+        except (EOFError, OSError, IPCProtocolError) as exc:
+            self.close(force=True)
+            raise CoreCrashed("worker returned an invalid IPC message") from exc
 
     def smoke_one_frame(self, content_path: Path) -> dict[str, Any]:
         loaded = self.command({"cmd": "LOAD", "path": str(content_path)})
