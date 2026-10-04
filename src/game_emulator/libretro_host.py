@@ -1,13 +1,20 @@
 """Parent-side orchestration for the disposable Libretro worker."""
 from __future__ import annotations
+
 import multiprocessing as mp
-import time
 from pathlib import Path
 from typing import Any
+
 from .libretro_worker import run_worker
 
-class CoreCrashed(RuntimeError): pass
-class CoreTimeout(TimeoutError): pass
+
+class CoreCrashed(RuntimeError):
+    pass
+
+
+class CoreTimeout(TimeoutError):
+    pass
+
 
 class IsolatedCore:
     def __init__(self, core_path: Path) -> None:
@@ -17,7 +24,9 @@ class IsolatedCore:
 
     def start(self, timeout: float = 3.0) -> dict[str, Any]:
         self.parent, child = mp.Pipe()
-        self.process = mp.Process(target=run_worker, args=(child, str(self.core_path)), daemon=True)
+        self.process = mp.Process(
+            target=run_worker, args=(child, str(self.core_path)), daemon=True
+        )
         self.process.start()
         child.close()
         if not self.parent.poll(timeout):
@@ -63,11 +72,9 @@ class IsolatedCore:
         if self.process.is_alive():
             self.process.terminate()
         self.process.join(2)
-        try:
-            self.parent.close()
-        except OSError:
-            pass
+        self.parent.close()
         self.parent = self.process = None
+
 
 def smoke_test(core_path: Path, content_path: Path, timeout: float = 5.0) -> dict[str, Any]:
     runner = IsolatedCore(core_path)
