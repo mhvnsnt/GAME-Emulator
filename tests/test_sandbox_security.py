@@ -1,3 +1,6 @@
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -45,3 +48,38 @@ def test_development_override_cannot_bypass_strict_worker_sandbox(monkeypatch, t
         sandbox.apply_native_core_sandbox(
             core, content, sandbox.SandboxPolicy(strict=True)
         )
+
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="requires Linux seccomp-BPF")
+def test_seccomp_network_filter_blocks_socket_creation_in_child():
+    code = """
+import socket
+from game_emulator.sandbox import _apply_linux_network_seccomp, _set_no_new_privs
+
+_set_no_new_privs()
+_apply_linux_network_seccomp()
+try:
+    socket.socket()
+except OSError:
+    print("socket-denied")
+else:
+    raise SystemExit("seccomp allowed socket creation")
+"""
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path(__file__).parents[1] / "src")
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    if result.returncode != 0 and (
+        "Operation not permitted" in result.stderr
+        or "seccomp syscall policy is not defined" in result.stderr
+    ):
+        pytest.skip("CI host or architecture cannot install the strict seccomp policy")
+    assert result.returncode == 0, result.stderr + result.stdout
+    assert "socket-denied" in result.stdout
