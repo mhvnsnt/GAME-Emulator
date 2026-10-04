@@ -18,6 +18,11 @@ def test_candidates_are_capability_based():
     ids = {backend.backend_id for backend in matches}
     assert "dolphin" in ids
     assert "pcsx2" not in ids
+    assert "retroarch" not in ids  # a frontend needs a separately matched core
+
+
+def test_empty_backend_capabilities_are_not_wildcards():
+    assert candidates(system="Unrecognized System", extension=".mystery") == []
 
 
 def test_dolphin_command_is_explicit():
