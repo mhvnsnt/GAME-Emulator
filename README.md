@@ -4,7 +4,7 @@ A local-first intake and library manager for game files you are authorized to us
 
 ## Current scope
 
-This repository starts with the local import/catalog pipeline migrated from the temporary Bannon staging branch. It is **not yet a finished universal emulator**. The repository now has typed Libretro FFI, an isolated worker, OS sandbox gating, metadata-driven core matching, and a capability registry for installed standalone backends. Real emulator execution remains gated by installed/authorized runtime components and platform-specific launch adapters.
+This repository starts with the local import/catalog pipeline migrated from the temporary Bannon staging branch. It is **not yet a finished universal emulator**. The repository now has typed Libretro FFI, an isolated worker, OS sandbox gating, metadata-driven core matching, a capability registry for installed standalone backends, and a provenance-aware open-source backend catalog. Real emulator execution remains gated by installed/authorized runtime components and platform-specific launch adapters.
 
 ## Quick start
 
@@ -21,10 +21,17 @@ ruff check src tests
 
 Run the local dashboard with `game-emulator-ui`, or import from the CLI with `game-emulator import`.
 
-See `docs/ARCHITECTURE.md`, `docs/LIBRETRO-WORKER.md`, and `docs/LIBRETRO-FFI-AND-OPEN-SOURCE.md` for the safety boundaries and integration gates.
+List researched upstream emulator projects without downloading or executing them:
+
+```bash
+game-emulator-open-source
+game-emulator-open-source --system "Sony PlayStation 2"
+game-emulator-open-source --license-review ppSSPP
+```
+
+The catalog is metadata only. It does not install emulator binaries, download game files, or certify a project for redistribution. Every exact release and its dependencies/assets must be license-reviewed before bundling. See `docs/OPEN-SOURCE-BACKENDS.md`, `docs/ARCHITECTURE.md`, `docs/LIBRETRO-WORKER.md`, and `docs/LIBRETRO-FFI-AND-OPEN-SOURCE.md` for the safety boundaries and integration gates.
 
 Only import files you are authorized to use. No ROM/BIOS/key downloading, DRM bypass, archive extraction, or automatic execution is part of this project.
-
 
 ## What "any game" means here
 
