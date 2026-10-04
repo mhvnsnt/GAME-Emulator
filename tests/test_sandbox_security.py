@@ -71,7 +71,7 @@ import socket
 from game_emulator.sandbox import _apply_linux_network_seccomp, _set_no_new_privs
 
 _set_no_new_privs()
-_apply_linux_network_seccomp()
+_apply_linux_network_seccomp(synchronize_threads=False)
 try:
     socket.socket()
 except OSError:
