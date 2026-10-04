@@ -21,13 +21,25 @@ def test_linux_sandbox_report_only_claims_tcp_udp_denial_after_policy_succeeds(
     content = tmp_path / "game.rom"
     core.write_bytes(b"synthetic core placeholder")
     content.write_bytes(b"synthetic authorized-content placeholder")
+    system_dir = tmp_path / "system"
+    system_dir.mkdir()
+    captured: dict[str, object] = {}
     monkeypatch.delenv("GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE", raising=False)
     monkeypatch.setattr(sandbox.platform, "system", lambda: "Linux")
     monkeypatch.setattr(sandbox, "_apply_unix_limits", lambda policy: None)
-    monkeypatch.setattr(sandbox, "_apply_linux_landlock", lambda core, game: 8)
+
+    def fake_landlock(core_path, content_path, read_only_paths=()):
+        captured["read_only_paths"] = read_only_paths
+        return 8
+
+    monkeypatch.setattr(sandbox, "_apply_linux_landlock", fake_landlock)
     monkeypatch.setattr(sandbox, "_apply_linux_network_seccomp", lambda: None)
 
-    result = sandbox.apply_native_core_sandbox(core, content, sandbox.SandboxPolicy(strict=True))
+    result = sandbox.apply_native_core_sandbox(
+        core,
+        content,
+        sandbox.SandboxPolicy(strict=True, read_only_paths=(system_dir,)),
+    )
 
     assert result["strict"] is True
     assert result["landlock_abi"] == 8
@@ -36,6 +48,7 @@ def test_linux_sandbox_report_only_claims_tcp_udp_denial_after_policy_succeeds(
     assert result["udp_restricted_by_landlock"] is False
     assert result["scoped_abstract_unix_sockets"] is True
     assert result["scoped_signals"] is True
+    assert captured["read_only_paths"] == (system_dir.resolve(),)
 
 
 def test_development_override_cannot_bypass_strict_worker_sandbox(monkeypatch, tmp_path: Path):
