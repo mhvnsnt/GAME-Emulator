@@ -134,7 +134,7 @@ def run_worker(conn: Connection, core_path: str) -> None:
                             "sandbox": worker.sandbox_info,
                         }
                     )
-                except Exception as exc:
+                except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
                     conn.send(
                         {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
                     )
