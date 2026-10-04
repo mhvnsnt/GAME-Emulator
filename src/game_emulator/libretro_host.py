@@ -23,7 +23,8 @@ class IsolatedCore:
         self.process = None
 
     def start(self, timeout: float = 3.0) -> dict[str, Any]:
-        ctx = mp.get_context("spawn")\n        self.parent, child = ctx.Pipe()
+        ctx = mp.get_context("spawn")
+        self.parent, child = ctx.Pipe()
         self.process = ctx.Process(
             target=run_worker, args=(child, str(self.core_path)), daemon=True
         )
