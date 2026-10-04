@@ -89,6 +89,12 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "beetle-psx": (
         ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u", "bin", "img", "iso", "mdf", "ecm")),
     ),
+    "beetle-psx-hw": (
+        ("Sony PlayStation", ("cue", "toc", "m3u", "ccd", "exe", "pbp", "chd", "bin", "img", "iso")),
+    ),
+    "pcsx-rearmed": (
+        ("Sony PlayStation", ("bin", "cue", "img", "mdf", "pbp", "toc", "cbn", "m3u", "ccd", "chd", "iso", "exe")),
+    ),
     "beetle-saturn": (
         ("Sega Saturn", ("cue", "toc", "m3u", "ccd", "chd")),
     ),
