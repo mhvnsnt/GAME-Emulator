@@ -84,7 +84,7 @@ class IsolatedCore:
             raise RuntimeError(f"one-frame tick failed: {tick}")
         if not tick.get("video_fired"):
             raise RuntimeError("retro_run completed without a video refresh callback")
-        return tick
+        return {**tick, "sandbox": loaded.get("sandbox")}
 
     def close(self, force: bool = False) -> None:
         if self.parent is None or self.process is None:
