@@ -9,7 +9,16 @@ from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
 
-from .libretro_abi import LibretroCallbacks, retro_game_info
+from .libretro_abi import (
+    LibretroCallbacks,
+    retro_audio_sample_batch_t,
+    retro_audio_sample_t,
+    retro_environment_t,
+    retro_game_info,
+    retro_input_poll_t,
+    retro_input_state_t,
+    retro_video_refresh_t,
+)
 
 
 class WorkerError(RuntimeError):
@@ -43,17 +52,17 @@ class LibretroWorker:
             if missing:
                 raise WorkerError("core missing required symbols: " + ", ".join(missing))
 
-            self.core.retro_set_environment.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_environment.argtypes = [retro_environment_t]
             self.core.retro_set_environment.restype = None
-            self.core.retro_set_video_refresh.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_video_refresh.argtypes = [retro_video_refresh_t]
             self.core.retro_set_video_refresh.restype = None
-            self.core.retro_set_audio_sample.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_audio_sample.argtypes = [retro_audio_sample_t]
             self.core.retro_set_audio_sample.restype = None
-            self.core.retro_set_audio_sample_batch.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_audio_sample_batch.argtypes = [retro_audio_sample_batch_t]
             self.core.retro_set_audio_sample_batch.restype = None
-            self.core.retro_set_input_poll.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_input_poll.argtypes = [retro_input_poll_t]
             self.core.retro_set_input_poll.restype = None
-            self.core.retro_set_input_state.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_input_state.argtypes = [retro_input_state_t]
             self.core.retro_set_input_state.restype = None
             self.core.retro_init.argtypes = []
             self.core.retro_init.restype = None
