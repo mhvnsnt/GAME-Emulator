@@ -11,6 +11,11 @@ from typing import Any
 CORE_SUFFIXES = {".dll", ".so", ".dylib"}
 
 
+def _normalize_system(value: str) -> str:
+    """Normalize Libretro vendor separators without broad fuzzy matching."""
+    return " ".join(value.replace("-", " ").split()).casefold()
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -53,7 +58,10 @@ def compatible_cores(
             str(value).lower().lstrip(".")
             for value in core.get("supported_extensions", [])
         }
-        system_match = any(system.lower() in value.lower() for value in systems)
+        normalized_system = _normalize_system(system)
+        system_match = any(
+            normalized_system == _normalize_system(value) for value in systems
+        )
         extension_match = normalized_extension in extensions
         if system_match and extension_match:
             matches.append(core)
