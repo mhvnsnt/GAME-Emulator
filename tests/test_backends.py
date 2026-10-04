@@ -32,3 +32,4 @@ def test_ppsspp_and_azahar_are_declared_for_their_systems():
     assert "pcsx2" not in psp
     assert "azahar" in three_ds
     assert "dolphin" not in three_ds
+\n\ndef test_ppsspp_command_is_explicit():\n    backend = next(backend for backend in candidates(system="Sony PlayStation Portable", extension=".iso") if backend.backend_id == "ppsspp")\n    assert command_for(backend, "/usr/bin/ppsspp", __import__("pathlib").Path("game.iso")) == [\n        "/usr/bin/ppsspp",\n        "game.iso",\n    ]\n\n\ndef test_azahar_stays_unlaunched_until_its_cli_contract_is_verified():\n    backend = next(backend for backend in candidates(system="Nintendo 3DS", extension=".3ds") if backend.backend_id == "azahar")\n    import pytest\n    with pytest.raises(ValueError, match="dedicated launch adapter"):\n        command_for(backend, "/usr/bin/azahar", __import__("pathlib").Path("game.3ds"))\n
