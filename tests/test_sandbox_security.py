@@ -30,3 +30,15 @@ def test_linux_sandbox_report_only_claims_tcp_udp_denial_after_policy_succeeds(
     assert result["network"] == "tcp_udp_denied"
     assert result["scoped_abstract_unix_sockets"] is True
     assert result["scoped_signals"] is True
+
+
+def test_development_override_cannot_bypass_strict_worker_sandbox(monkeypatch, tmp_path: Path):
+    core = tmp_path / "core.so"
+    content = tmp_path / "game.rom"
+    core.write_bytes(b"synthetic core placeholder")
+    content.write_bytes(b"synthetic authorized-content placeholder")
+    monkeypatch.setenv("GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE", "1")
+    with pytest.raises(sandbox.SandboxError, match="cannot be bypassed"):
+        sandbox.apply_native_core_sandbox(
+            core, content, sandbox.SandboxPolicy(strict=True)
+        )
