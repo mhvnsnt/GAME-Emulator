@@ -43,6 +43,29 @@ class LibretroWorker:
             if missing:
                 raise WorkerError("core missing required symbols: " + ", ".join(missing))
 
+            self.core.retro_set_environment.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_environment.restype = None
+            self.core.retro_set_video_refresh.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_video_refresh.restype = None
+            self.core.retro_set_audio_sample.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_audio_sample.restype = None
+            self.core.retro_set_audio_sample_batch.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_audio_sample_batch.restype = None
+            self.core.retro_set_input_poll.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_input_poll.restype = None
+            self.core.retro_set_input_state.argtypes = [ctypes.c_void_p]
+            self.core.retro_set_input_state.restype = None
+            self.core.retro_init.argtypes = []
+            self.core.retro_init.restype = None
+            self.core.retro_load_game.argtypes = [ctypes.POINTER(retro_game_info)]
+            self.core.retro_load_game.restype = ctypes.c_bool
+            self.core.retro_run.argtypes = []
+            self.core.retro_run.restype = None
+            self.core.retro_unload_game.argtypes = []
+            self.core.retro_unload_game.restype = None
+            self.core.retro_deinit.argtypes = []
+            self.core.retro_deinit.restype = None
+
             self.core.retro_set_environment(self.callbacks.cb_env)
             self.core.retro_set_video_refresh(self.callbacks.cb_video)
             self.core.retro_set_audio_sample(self.callbacks.cb_audio)
