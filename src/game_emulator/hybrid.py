@@ -10,10 +10,11 @@ be driven by one normalized input stream and their video outputs can be
 composed into a new presentation. Later adapters can add save-state, asset,
 memory, or game-specific transformation support when a backend proves it.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Literal
+from dataclasses import dataclass, field
 
 
 BlendMode = Literal["side_by_side", "overlay", "picture_in_picture"]
@@ -66,7 +67,11 @@ def compose_frame(
     deliberately does not decode or reinterpret arbitrary game memory.
     """
     profile.validate()
-    missing = [source.source_id for source in profile.sources if source.source_id not in frames]
+    missing = [
+        source.source_id
+        for source in profile.sources
+        if source.source_id not in frames
+    ]
     if missing:
         raise ValueError("missing runtime frame(s): " + ", ".join(missing))
 
