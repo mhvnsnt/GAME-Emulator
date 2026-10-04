@@ -42,7 +42,7 @@ class SandboxPolicy:
 # Linux architectures; unsupported architectures fail closed.
 _LANDLOCK_CREATE_RULESET_VERSION = 1
 _LANDLOCK_RULE_PATH_BENEATH = 1
-_LANDLOCK_RESTRICT_SELF = 1
+_LANDLOCK_RESTRICT_SELF_TSYNC = 1 << 3
 _LANDLOCK_CREATE_RULESET_VERSION_FLAG = 1
 
 _LANDLOCK_ACCESS_FS_EXECUTE = 1 << 0
@@ -72,8 +72,9 @@ _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET = 1 << 0
 _LANDLOCK_SCOPE_SIGNAL = 1 << 1
 
 _PR_SET_NO_NEW_PRIVS = 38
-_PR_SET_SECCOMP = 22
-_SECCOMP_MODE_FILTER = 2
+_SECCOMP_SET_MODE_FILTER = 1
+_SECCOMP_FILTER_FLAG_TSYNC = 1
+_SECCOMP_RET_KILL_PROCESS = 0x80000000
 _SECCOMP_RET_ERRNO = 0x00050000
 _SECCOMP_RET_ALLOW = 0x7FFF0000
 _BPF_LD_W_ABS = 0x20
@@ -99,6 +100,20 @@ _NETWORK_SYSCALLS = {
     "aarch64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
     "arm64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
     "riscv64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
+}
+_SECCOMP_SYSCALLS = {
+    "x86_64": 317,
+    "amd64": 317,
+    "aarch64": 277,
+    "arm64": 277,
+    "riscv64": 277,
+}
+_AUDIT_ARCH = {
+    "x86_64": 0xC000003E,
+    "amd64": 0xC000003E,
+    "aarch64": 0xC00000B7,
+    "arm64": 0xC00000B7,
+    "riscv64": 0xC00000F3,
 }
 
 
@@ -205,9 +220,9 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
     abi, (create, add_rule, restrict) = _landlock_abi()
     # Landlock ABI 4 provides TCP restrictions. Seccomp below blocks socket
     # creation and network syscalls including UDP on older kernels.
-    if abi < 4:
+    if abi < 8:
         raise SandboxError(
-            "Linux strict mode requires Landlock ABI >= 4 for TCP restrictions"
+            "Linux strict mode requires Landlock ABI >= 8 for process-wide thread synchronization"
         )
 
     fs = (
@@ -284,7 +299,7 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
         )
 
         _set_no_new_privs()
-        if _syscall(restrict, ruleset_fd, 0) != 0:
+        if _syscall(restrict, ruleset_fd, _LANDLOCK_RESTRICT_SELF_TSYNC) != 0:
             err = ctypes.get_errno()
             raise SandboxError(f"Landlock enforcement failed: {os.strerror(err)}")
     finally:
@@ -297,6 +312,8 @@ def _apply_linux_network_seccomp() -> None:
     architecture = platform.machine().lower()
     try:
         syscalls = _NETWORK_SYSCALLS[architecture]
+        seccomp_syscall = _SECCOMP_SYSCALLS[architecture]
+        audit_arch = _AUDIT_ARCH[architecture]
     except KeyError as exc:
         raise SandboxError(
             f"seccomp network syscall policy is not defined for {architecture}"
@@ -306,7 +323,14 @@ def _apply_linux_network_seccomp() -> None:
     if architecture in {"x86_64", "amd64"}:
         syscalls = tuple(sorted(set(syscalls) | {number | 0x40000000 for number in syscalls}))
 
-    instructions = [_SockFilter(_BPF_LD_W_ABS, 0, 0, 0)]
+    # Reject alternate syscall ABIs before checking syscall numbers, so a
+    # compat ABI cannot bypass the network-denial list.
+    instructions = [
+        _SockFilter(_BPF_LD_W_ABS, 0, 0, 4),
+        _SockFilter(_BPF_JMP_JEQ_K, 1, 0, audit_arch),
+        _SockFilter(_BPF_RET_K, 0, 0, _SECCOMP_RET_KILL_PROCESS),
+        _SockFilter(_BPF_LD_W_ABS, 0, 0, 0),
+    ]
     for number in syscalls:
         instructions.append(_SockFilter(_BPF_JMP_JEQ_K, 0, 1, number))
         instructions.append(_SockFilter(_BPF_RET_K, 0, 0, _SECCOMP_RET_ERRNO | 1))
@@ -319,11 +343,10 @@ def _apply_linux_network_seccomp() -> None:
     # Landlock setup has already applied PR_SET_NO_NEW_PRIVS, required by
     # unprivileged seccomp filters. No syscall may create/use network sockets.
     if _syscall(
-        _PR_SET_SECCOMP,
-        _SECCOMP_MODE_FILTER,
+        seccomp_syscall,
+        _SECCOMP_SET_MODE_FILTER,
+        _SECCOMP_FILTER_FLAG_TSYNC,
         ctypes.byref(program),
-        0,
-        0,
     ) != 0:
         err = ctypes.get_errno()
         raise SandboxError(f"seccomp network filter failed: {os.strerror(err)}")
@@ -457,7 +480,7 @@ def apply_native_core_sandbox(
             "strict": True,
             "landlock": True,
             "landlock_abi": abi,
-            "network": "socket_syscalls_denied_by_seccomp_and_tcp_by_landlock",
+            "network": "socket_syscalls_denied_by_process_wide_seccomp_and_tcp_by_landlock",
             "udp_restricted_by_landlock": abi >= 10,
             "scoped_abstract_unix_sockets": abi >= 6,
             "scoped_signals": abi >= 6,
