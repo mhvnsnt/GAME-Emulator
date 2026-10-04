@@ -11,6 +11,7 @@ composed into a new presentation. Later adapters can add save-state, asset,
 memory, or game-specific transformation support when a backend proves it.
 """
 
+# ruff: isort: skip_file
 from __future__ import annotations
 
 from dataclasses import dataclass, field
