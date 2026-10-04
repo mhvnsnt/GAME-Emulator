@@ -55,7 +55,7 @@ entry is not proof of a compatible installed binary. Official references:
 - [Official Beetle bsnes Libretro documentation](https://docs.libretro.com/library/beetle_bsnes/)
 - [Official Mesen-S Libretro documentation](https://docs.libretro.com/library/mesen-s/)
 
-## License and provenance gate
+## Upstream Libretro metadata\n\nThe inventory layer now consumes the installed core's `.info` metadata using the same fields used by the upstream Libretro core-info collection: `supported_extensions`, `systemname`, `database`, `systemid`, `license`, `permissions`, and firmware declarations. The `database` field is important for multi-system cores because it can enumerate several exact system/database names; matching remains exact after conservative separator normalization and still requires the requested extension to be present. We do not vendor this metadata repository or download it at runtime. The upstream mirror is `libretro/libretro-core-info`; the upstream database repository separately documents CRC/serial/hash-based game identification.\n\n## License and provenance gate
 
 The catalog intentionally marks every project as **not cleared for redistribution**
 until a human reviews the exact release, its dependencies, bundled assets, notices,
