@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from game_emulator.libretro_host import smoke_test
 from game_emulator import libretro_worker
+from game_emulator.libretro_host import smoke_test
 
 
 @pytest.mark.skipif(
