@@ -357,7 +357,7 @@ def _apply_linux_network_seccomp(*, synchronize_threads: bool = True) -> None:
     Production uses seccomp TSYNC to cover every worker thread. The single-threaded
     integration test can disable TSYNC only to validate the filter in restricted CI
     containers that reject the seccomp() syscall entirely.
-    """.strip()
+    """
     architecture = platform.machine().lower()
     try:
         syscalls = _DENIED_SYSCALLS[architecture]
