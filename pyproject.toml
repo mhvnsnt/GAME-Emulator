@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "game-emulator-lab"
+version = "0.2.0"
+description = "Local-first library intake and catalog for authorized game files"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ["watchdog>=4.0,<7"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0,<9", "ruff>=0.5"]
+
+[project.scripts]
+game-emulator = "game_emulator.library:main"
+game-emulator-ui = "game_emulator.app:main"
+game-emulator-watch-folder = "game_emulator.autowatch:main"
+game-emulator-launch = "game_emulator.launcher:main"
+game-emulator-adapters = "game_emulator.adapters:main"
+game-emulator-watch = "game_emulator.watcher:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
