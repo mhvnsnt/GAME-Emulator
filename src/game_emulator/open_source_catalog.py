@@ -113,6 +113,17 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
         "https://github.com/flyinghead/flycast", "GPLv2 (verify exact revision)", "upstream_candidate",
         "Official Libretro docs list Dreamcast/NAOMI/Atomiswave; match local extensions and system metadata.",
     ),
+    OpenSourceProject(
+        "mesence", "MesenCE", (
+            "Nintendo NES", "Nintendo Famicom Disk System",
+            "Nintendo Super Nintendo Entertainment System", "Nintendo Game Boy",
+            "Nintendo Game Boy Color", "Nintendo Game Boy Advance",
+            "NEC PC Engine", "NEC PC Engine CD", "Sega Master System",
+            "Sega Game Gear", "Bandai WonderSwan", "Bandai WonderSwan Color",
+        ), "libretro_core",
+        "https://github.com/libretro/Mesen", "GPL-3.0-only (verify exact revision)", "upstream_candidate",
+        "Multi-system Mesen port; exact installed .info system/extension metadata remains authoritative.",
+    ),
 )
 
 
