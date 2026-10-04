@@ -63,7 +63,7 @@ content = Path({str(content)!r})
 info = apply_native_core_sandbox(Path({sys.executable!r}), content)
 assert info["strict"] is True
 assert info["landlock"] is True
-assert info["network"] == "tcp_udp_denied"
+assert info["network"] == "socket_syscalls_denied_by_seccomp_and_tcp_by_landlock"
 
 try:
     Path("/etc/passwd").read_bytes()
@@ -98,9 +98,9 @@ else:
     )
     if result.returncode != 0 and (
         "Operation not permitted" in result.stderr
-        or "Landlock ABI >= 10" in result.stderr
+        or "Landlock ABI >= 4" in result.stderr
     ):
         pytest.skip(
-            "CI host cannot demonstrate the required Landlock ABI/policy; strict worker fails closed"
+            "CI host cannot demonstrate the required Landlock/seccomp policy; strict worker fails closed"
         )
     assert result.returncode == 0, result.stderr + result.stdout
