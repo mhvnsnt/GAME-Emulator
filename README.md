@@ -1,10 +1,6 @@
 # GAME: Emulator
 
-A local-first intake and library manager for game files you are authorized to use.
-
-## Current scope
-
-This repository starts with the local import/catalog pipeline migrated from the temporary Bannon staging branch. It is **not yet a finished universal emulator**. The repository now has typed Libretro FFI, an isolated worker, OS sandbox gating, metadata-driven core matching, a capability registry for installed standalone backends, and a provenance-aware open-source backend catalog. Real emulator execution remains gated by installed/authorized runtime components and platform-specific launch adapters.
+GAME: Emulator is a local-first game library and runtime router, not a claim that one emulator can natively execute every platform. It currently provides safe file intake, backend discovery, Libretro metadata inventory, a typed Libretro worker prototype, strict sandbox gates, and an open-source backend catalog.
 
 ## Quick start
 
@@ -26,10 +22,18 @@ List researched upstream emulator projects without downloading or executing them
 ```bash
 game-emulator-open-source
 game-emulator-open-source --system "Sony PlayStation 2"
-game-emulator-open-source --license-review ppSSPP
+game-emulator-open-source --license-review ppsspp
 ```
 
-The catalog is metadata only. It does not install emulator binaries, download game files, or certify a project for redistribution. Every exact release and its dependencies/assets must be license-reviewed before bundling. See `docs/OPEN-SOURCE-BACKENDS.md`, `docs/ARCHITECTURE.md`, `docs/LIBRETRO-WORKER.md`, and `docs/LIBRETRO-FFI-AND-OPEN-SOURCE.md` for the safety boundaries and integration gates.
+Compare installed Libretro core metadata against catalog candidates (metadata only; no native code is loaded):
+
+```bash
+game-emulator-open-source --installed-cores ~/.config/retroarch/cores --info ~/.config/retroarch/cores
+```
+
+Use the actual core and info directories for your installation. The report distinguishes catalog entries from local core files whose `.info` metadata matches a known system and representative extension. A metadata match is not proof of runtime compatibility, successful gameplay, or sandbox containment.
+
+The catalog does not install emulator binaries, download game files, or certify a project for redistribution. Every exact release and its dependencies/assets must be license-reviewed before bundling. See `docs/OPEN-SOURCE-BACKENDS.md`, `docs/ARCHITECTURE.md`, `docs/LIBRETRO-WORKER.md`, and `docs/LIBRETRO-FFI-AND-OPEN-SOURCE.md` for safety boundaries and integration gates.
 
 Only import files you are authorized to use. No ROM/BIOS/key downloading, DRM bypass, archive extraction, or automatic execution is part of this project.
 
