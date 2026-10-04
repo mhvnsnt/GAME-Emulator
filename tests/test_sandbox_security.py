@@ -91,6 +91,7 @@ else:
     )
     if result.returncode != 0 and (
         "Operation not permitted" in result.stderr
+        or "Permission denied" in result.stderr
         or "seccomp syscall policy is not defined" in result.stderr
     ):
         pytest.skip("CI host or architecture cannot install the strict seccomp policy")
