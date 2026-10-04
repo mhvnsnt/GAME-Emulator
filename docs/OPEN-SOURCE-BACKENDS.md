@@ -82,11 +82,11 @@ This distinction is intentional: "recognized", "supported by a backend", and
 
 ## Linux containment gate
 
-The Libretro worker's strict Linux path requires Landlock ABI >= 4 for TCP
+The Libretro worker's strict Linux path requires Landlock ABI >= 8 for process-wide thread-synchronized TCP
 restrictions and installs a seccomp-BPF filter that denies socket/network syscalls,
 including UDP on kernels whose Landlock ABI cannot restrict UDP. It also applies
 process resource limits and `no_new_privs`. This is not a claim that every host
 interface is unavailable. CI's integration test attempts to demonstrate blocked
 host-file reads, filesystem writes, and TCP connects; it skips when the host denies
-the required policy. A successful test on a supported host is required before
+the required thread-synchronized policy. A successful test on a supported host is required before
 native launch can be certified.
