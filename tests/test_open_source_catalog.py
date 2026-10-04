@@ -8,7 +8,7 @@ from game_emulator.open_source_catalog_cli import installed_core_matches
 
 def test_catalog_entries_have_upstream_and_license_provenance():
     projects = list_projects()
-    assert len(projects) >= 8
+    assert len(projects) >= 14
     assert all(row["upstream_url"].startswith("https://") for row in projects)
     assert all(row["license_spdx"] for row in projects)
     assert all(row["status"] in {"catalogued", "upstream_candidate"} for row in projects)
@@ -69,3 +69,44 @@ def test_installed_core_matches_require_system_and_extension_metadata():
     assert [row["core_file"] for row in mgba["installed_metadata_matches"]] == ["mgba_libretro.so"]
     assert all(row["project_id"] != "beetle-psx" for row in matches)
     assert all(row["project_id"] != "nestopia" for row in matches)
+
+
+def test_expanded_catalog_maps_snes_and_saturn_only_with_matching_extensions():
+    inventory = {
+        "cores": [
+            {
+                "file": "snes9x_libretro.so",
+                "display_name": "Snes9x",
+                "supported_systems": ["Nintendo - SNES/SFC"],
+                "supported_extensions": ["smc", "sfc", "swc", "fig", "bs", "st"],
+                "sha256": "d" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "beetle_saturn_libretro.so",
+                "display_name": "Beetle Saturn",
+                "supported_systems": ["Sega - Saturn"],
+                "supported_extensions": ["cue", "toc", "m3u", "ccd", "chd"],
+                "sha256": "e" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+            {
+                "file": "wrong_extension_libretro.so",
+                "display_name": "Wrong extension",
+                "supported_systems": ["Sega - Saturn"],
+                "supported_extensions": ["iso"],
+                "sha256": "f" * 64,
+                "metadata_present": True,
+                "trust_status": "inventory_only_not_executed",
+            },
+        ]
+    }
+    matches = installed_core_matches(inventory)
+    snes = next(row for row in matches if row["project_id"] == "snes9x")
+    saturn = next(row for row in matches if row["project_id"] == "beetle-saturn")
+    assert {m["core_file"] for m in snes["installed_metadata_matches"]} == {"snes9x_libretro.so"}
+    assert {m["core_file"] for m in saturn["installed_metadata_matches"]} == {"beetle_saturn_libretro.so"}
+    assert all(m["core_file"] != "wrong_extension_libretro.so" for m in saturn["installed_metadata_matches"])
+    assert all(m["trust_status"] == "inventory_only_not_executed" for m in saturn["installed_metadata_matches"])
