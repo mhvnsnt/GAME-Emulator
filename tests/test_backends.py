@@ -16,16 +16,12 @@ def test_candidates_are_capability_based():
     assert "pcsx2" not in ids
 
 
-def test_standalone_command_is_explicit():
-    backend = Backend(
-        "test", "Test", "standalone",
-        frozenset({"Test System"}), frozenset({".bin"}),
-        license="MIT",
-    )
-    assert command_for(backend, "/usr/bin/test-emulator", __import__("pathlib").Path("game.bin")) == [
-        "/usr/bin/test-emulator",
+def test_dolphin_command_is_explicit():
+    backend = next(backend for backend in candidates(system="Nintendo GameCube", extension=".iso") if backend.backend_id == "dolphin")
+    assert command_for(backend, "/usr/bin/dolphin-emu", __import__("pathlib").Path("game.iso")) == [
+        "/usr/bin/dolphin-emu",
         "-e",
-        "game.bin",
+        "game.iso",
     ]
 
 
