@@ -26,6 +26,9 @@ Linux strict mode uses Landlock plus `PR_SET_NO_NEW_PRIVS`:
 - native shared libraries and required system library trees are read/execute only;
 - the core directory is read/execute only;
 - the content directory is read-only;
+- the dynamic loader cache is readable so dependent libraries can be resolved;
+- an optional explicitly configured firmware/system directory is read-only; no
+  broad home directory or default BIOS search path is granted;
 - filesystem writes, creation, deletion, and truncation handled by the
   available Landlock ABI are denied;
 - strict mode requires Landlock ABI >= 8 for thread-synchronized TCP restrictions and installs a
@@ -59,6 +62,11 @@ at process launch; the existing in-process worker does not silently downgrade
 to an unrestricted native core.
 
 ## Protocol
+
+The worker accepts an optional `--system-dir` path for locally installed,
+authorized firmware. The directory must be a real directory, not a symlink, and
+is exposed read-only by the Landlock policy. Without it, firmware-dependent cores
+may correctly fail to load content rather than silently read arbitrary host paths.
 
 The worker sends `READY`, then accepts `LOAD`, `TICK`, and `SHUTDOWN`.
 `LOAD` reports the sandbox policy that actually succeeded. `TICK` performs
