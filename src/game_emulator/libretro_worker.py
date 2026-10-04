@@ -1,39 +1,48 @@
-"""Disposable Libretro core worker.
-
-This process is the native-code trust boundary. The parent must never ctypes.CDLL
-an untrusted core. A worker crash is reported by process exit, not propagated to
-the parent Python interpreter.
-"""
+"""Disposable Libretro core worker."""
 from __future__ import annotations
+
+import argparse
 import ctypes
-import os
+import json
 import sys
 from multiprocessing.connection import Connection
 from pathlib import Path
 from typing import Any
+
 from .libretro_abi import LibretroCallbacks, retro_game_info
 
-class WorkerError(RuntimeError): pass
+
+class WorkerError(RuntimeError):
+    pass
+
 
 class LibretroWorker:
     def __init__(self, core_path: str) -> None:
         self.core_path = str(Path(core_path).expanduser().resolve(strict=True))
         self.callbacks = LibretroCallbacks()
         self.core = None
+        self._content_path_bytes = None
 
     def load(self, content_path: str) -> bool:
         if self.core is None:
             self.core = ctypes.CDLL(self.core_path)
             required = (
-                "retro_set_environment", "retro_set_video_refresh",
-                "retro_set_audio_sample", "retro_set_audio_sample_batch",
-                "retro_set_input_poll", "retro_set_input_state",
-                "retro_init", "retro_load_game", "retro_run",
-                "retro_unload_game", "retro_deinit",
+                "retro_set_environment",
+                "retro_set_video_refresh",
+                "retro_set_audio_sample",
+                "retro_set_audio_sample_batch",
+                "retro_set_input_poll",
+                "retro_set_input_state",
+                "retro_init",
+                "retro_load_game",
+                "retro_run",
+                "retro_unload_game",
+                "retro_deinit",
             )
             missing = [name for name in required if not hasattr(self.core, name)]
             if missing:
                 raise WorkerError("core missing required symbols: " + ", ".join(missing))
+
             self.core.retro_set_environment(self.callbacks.cb_env)
             self.core.retro_set_video_refresh(self.callbacks.cb_video)
             self.core.retro_set_audio_sample(self.callbacks.cb_audio)
@@ -41,6 +50,7 @@ class LibretroWorker:
             self.core.retro_set_input_poll(self.callbacks.cb_input_poll)
             self.core.retro_set_input_state(self.callbacks.cb_input_state)
             self.core.retro_init()
+
         path_bytes = str(Path(content_path).expanduser().resolve(strict=True)).encode()
         self._content_path_bytes = path_bytes
         info = retro_game_info(path=path_bytes, data=None, size=0, meta=None)
@@ -50,8 +60,12 @@ class LibretroWorker:
         if self.core is None:
             raise WorkerError("core is not loaded")
         self.callbacks.frame_rendered = False
+        self.callbacks.last_video = None
         self.core.retro_run()
-        return {"video_fired": self.callbacks.frame_rendered, "video": self.callbacks.last_video}
+        return {
+            "video_fired": self.callbacks.frame_rendered,
+            "video": self.callbacks.last_video,
+        }
 
     def shutdown(self) -> None:
         if self.core is None:
@@ -61,6 +75,7 @@ class LibretroWorker:
         finally:
             self.core.retro_deinit()
             self.core = None
+
 
 def run_worker(conn: Connection, core_path: str) -> None:
     worker = LibretroWorker(core_path)
@@ -74,13 +89,17 @@ def run_worker(conn: Connection, core_path: str) -> None:
                     ok = worker.load(message["path"])
                     conn.send({"status": "LOADED" if ok else "FAILED"})
                 except Exception as exc:
-                    conn.send({"status": "ERROR", "error": type(exc).__name__ + ": " + str(exc)})
+                    conn.send(
+                        {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
+                    )
             elif command == "TICK":
                 try:
                     result = worker.tick()
                     conn.send({"status": "TICK_COMPLETE", **result})
                 except Exception as exc:
-                    conn.send({"status": "ERROR", "error": type(exc).__name__ + ": " + str(exc)})
+                    conn.send(
+                        {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
+                    )
             elif command == "SHUTDOWN":
                 worker.shutdown()
                 conn.send({"status": "SHUTDOWN"})
@@ -90,29 +109,29 @@ def run_worker(conn: Connection, core_path: str) -> None:
     except (EOFError, BrokenPipeError):
         return
     finally:
-        try:
-            conn.close()
-        except OSError:
-            pass
+        conn.close()
+
 
 def main() -> None:
-    import argparse
-    from multiprocessing import Pipe, Process
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Run a disposable Libretro core worker")
     parser.add_argument("--core", required=True)
     args = parser.parse_args()
+    from multiprocessing import Pipe, Process
+
     parent, child = Pipe()
     process = Process(target=run_worker, args=(child, args.core), daemon=True)
     process.start()
     child.close()
     try:
-        print(parent.recv())
-        while True:
-            line = sys.stdin.readline()
-            if not line: break
-            parent.send(__import__("json").loads(line))
-            print(__import__("json").dumps(parent.recv()), flush=True)
+        print(json.dumps(parent.recv()))
+        for line in sys.stdin:
+            parent.send(json.loads(line))
+            print(json.dumps(parent.recv()), flush=True)
     finally:
         if process.is_alive():
             process.terminate()
         process.join(2)
+
+
+if __name__ == "__main__":
+    main()
