@@ -72,6 +72,13 @@ _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET = 1 << 0
 _LANDLOCK_SCOPE_SIGNAL = 1 << 1
 
 _PR_SET_NO_NEW_PRIVS = 38
+_PR_SET_SECCOMP = 22
+_SECCOMP_MODE_FILTER = 2
+_SECCOMP_RET_ERRNO = 0x00050000
+_SECCOMP_RET_ALLOW = 0x7FFF0000
+_BPF_LD_W_ABS = 0x20
+_BPF_JMP_JEQ_K = 0x15
+_BPF_RET_K = 0x06
 
 # Landlock was added at syscall numbers 444..446 on the architectures we
 # support explicitly here.
@@ -83,6 +90,32 @@ _LANDLOCK_SYSCALLS = {
     "riscv64": (444, 445, 446),
     "ppc64le": (444, 445, 446),
 }
+
+# Linux syscall numbers for blocking socket/network operations with seccomp.
+# Unsupported architectures fail closed instead of claiming network isolation.
+_NETWORK_SYSCALLS = {
+    "x86_64": (41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 288, 299, 307, 425, 426, 427),
+    "amd64": (41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 288, 299, 307, 425, 426, 427),
+    "aarch64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
+    "arm64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
+    "riscv64": (198, 199, 200, 201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 242, 243, 269, 425, 426, 427),
+}
+
+
+class _SockFilter(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_ushort),
+        ("jt", ctypes.c_ubyte),
+        ("jf", ctypes.c_ubyte),
+        ("k", ctypes.c_uint32),
+    ]
+
+
+class _SockFprog(ctypes.Structure):
+    _fields_ = [
+        ("len", ctypes.c_ushort),
+        ("filter", ctypes.POINTER(_SockFilter)),
+    ]
 
 
 class _RulesetAttr(ctypes.Structure):
@@ -170,12 +203,11 @@ def _add_path_rule(
 
 def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
     abi, (create, add_rule, restrict) = _landlock_abi()
-    # ABI 10 is required for both TCP and UDP network restrictions. Older
-    # kernels can block TCP but leave UDP available; reporting those as
-    # "network denied" would overstate the security boundary.
-    if abi < 10:
+    # Landlock ABI 4 provides TCP restrictions. Seccomp below blocks socket
+    # creation and network syscalls including UDP on older kernels.
+    if abi < 4:
         raise SandboxError(
-            "Linux strict mode requires Landlock ABI >= 10 for TCP and UDP restrictions"
+            "Linux strict mode requires Landlock ABI >= 4 for TCP restrictions"
         )
 
     fs = (
@@ -206,15 +238,14 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
     if abi >= 9:
         fs |= _LANDLOCK_ACCESS_FS_RESOLVE_UNIX
 
-    net = 0
-    if abi >= 4:
-        net |= _LANDLOCK_ACCESS_NET_BIND_TCP | _LANDLOCK_ACCESS_NET_CONNECT_TCP
+    net = _LANDLOCK_ACCESS_NET_BIND_TCP | _LANDLOCK_ACCESS_NET_CONNECT_TCP
     if abi >= 10:
         net |= _LANDLOCK_ACCESS_NET_BIND_UDP | _LANDLOCK_ACCESS_NET_CONNECT_SEND_UDP
 
-    # Prevent the confined process from using abstract Unix sockets or
-    # signaling processes outside its Landlock domain when supported.
-    scoped = _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | _LANDLOCK_SCOPE_SIGNAL
+    # IPC scoping was introduced in ABI 6.
+    scoped = 0
+    if abi >= 6:
+        scoped = _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | _LANDLOCK_SCOPE_SIGNAL
 
     attr = _RulesetAttr(handled_access_fs=fs, handled_access_net=net, scoped=scoped)
     ruleset_fd = _syscall(
@@ -259,6 +290,43 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
     finally:
         os.close(ruleset_fd)
     return abi
+
+
+def _apply_linux_network_seccomp() -> None:
+    """Deny socket/network syscalls, including UDP on pre-ABI-10 kernels."""
+    architecture = platform.machine().lower()
+    try:
+        syscalls = _NETWORK_SYSCALLS[architecture]
+    except KeyError as exc:
+        raise SandboxError(
+            f"seccomp network syscall policy is not defined for {architecture}"
+        ) from exc
+
+    # x32 syscall numbers share x86_64's table with __X32_SYSCALL_BIT set.
+    if architecture in {"x86_64", "amd64"}:
+        syscalls = tuple(sorted(set(syscalls) | {number | 0x40000000 for number in syscalls}))
+
+    instructions = [_SockFilter(_BPF_LD_W_ABS, 0, 0, 0)]
+    for number in syscalls:
+        instructions.append(_SockFilter(_BPF_JMP_JEQ_K, 0, 1, number))
+        instructions.append(_SockFilter(_BPF_RET_K, 0, 0, _SECCOMP_RET_ERRNO | 1))
+    instructions.append(_SockFilter(_BPF_RET_K, 0, 0, _SECCOMP_RET_ALLOW))
+    filters = (_SockFilter * len(instructions))(*instructions)
+    program = _SockFprog(
+        len=len(instructions),
+        filter=ctypes.cast(filters, ctypes.POINTER(_SockFilter)),
+    )
+    # Landlock setup has already applied PR_SET_NO_NEW_PRIVS, required by
+    # unprivileged seccomp filters. No syscall may create/use network sockets.
+    if _syscall(
+        _PR_SET_SECCOMP,
+        _SECCOMP_MODE_FILTER,
+        ctypes.byref(program),
+        0,
+        0,
+    ) != 0:
+        err = ctypes.get_errno()
+        raise SandboxError(f"seccomp network filter failed: {os.strerror(err)}")
 
 
 def _apply_unix_limits(policy: SandboxPolicy) -> None:
@@ -383,14 +451,17 @@ def apply_native_core_sandbox(
 
     if system == "Linux":
         abi = _apply_linux_landlock(core_path, content_path)
+        _apply_linux_network_seccomp()
         return {
             "platform": system,
             "strict": True,
             "landlock": True,
             "landlock_abi": abi,
-            "network": "tcp_udp_denied",
+            "network": "socket_syscalls_denied_by_seccomp_and_tcp_by_landlock",
+            "udp_restricted_by_landlock": abi >= 10,
             "scoped_abstract_unix_sockets": abi >= 6,
             "scoped_signals": abi >= 6,
+            "seccomp_network_filter": True,
         }
     if system == "Windows":
         _apply_windows_job_limits(policy)
