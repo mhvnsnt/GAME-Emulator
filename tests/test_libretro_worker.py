@@ -24,6 +24,26 @@ def test_real_one_frame_smoke():
     assert result["video_fired"] is True
 
 
+def test_worker_system_directory_is_explicit_and_must_be_real_directory(tmp_path):
+    core = tmp_path / "fake-core.so"
+    core.write_bytes(b"not-a-library")
+    system_dir = tmp_path / "system"
+    system_dir.mkdir()
+
+    worker = libretro_worker.LibretroWorker(str(core), str(system_dir))
+    assert worker.system_dir == system_dir.resolve()
+
+    file_path = tmp_path / "not-a-directory"
+    file_path.write_text("not a directory", encoding="utf-8")
+    with pytest.raises(libretro_worker.WorkerError, match="must be a directory"):
+        libretro_worker.LibretroWorker(str(core), str(file_path))
+
+    symlink = tmp_path / "system-link"
+    symlink.symlink_to(system_dir, target_is_directory=True)
+    with pytest.raises(libretro_worker.WorkerError, match="symbolic link"):
+        libretro_worker.LibretroWorker(str(core), str(symlink))
+
+
 def test_native_load_is_after_sandbox(monkeypatch, tmp_path):
     core = tmp_path / "fake-core.so"
     content = tmp_path / "test.rom"
