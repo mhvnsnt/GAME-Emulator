@@ -63,3 +63,10 @@ def test_quicknes_and_sameboy_only_match_exact_local_system_and_extension_metada
         row["core_file"]
         for row in matches["sameboy"]["installed_metadata_matches"]
     }
+
+
+def test_beetle_psx_accepts_upstream_playstation_bin_metadata():
+    inventory = {"cores": [{"file": "mednafen_psx_libretro.so", "display_name": "Sony - PlayStation (Beetle PSX)", "supported_systems": ["PlayStation"], "supported_extensions": ["cue", "toc", "m3u", "ccd", "exe", "pbp", "chd", "bin"], "sha256": "d" * 64, "metadata_present": True, "trust_status": "inventory_only_not_executed"}]}
+    matches = installed_core_matches(inventory)
+    rows = next(row for row in matches if row["project_id"] == "beetle-psx")["installed_metadata_matches"]
+    assert any(row["core_file"] == "mednafen_psx_libretro.so" and row["matched_extension"] == "bin" for row in rows)
