@@ -1,4 +1,5 @@
 import os
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -45,15 +46,21 @@ def test_native_load_is_after_sandbox(monkeypatch, tmp_path):
 
 
 @pytest.mark.skipif(sys.platform != "linux", reason="requires Linux Landlock")
-def test_linux_sandbox_denies_host_file(tmp_path):
+def test_linux_sandbox_denies_host_file_write_and_tcp(tmp_path):
     content = tmp_path / "authorized.rom"
     content.write_bytes(b"test")
+    with socket.socket() as listener:
+        listener.bind(("127.0.0.1", 0))
+        listener.listen(1)
+        tcp_port = listener.getsockname()[1]
 
-    code = f"""
+        code = f"""
+import socket
 from pathlib import Path
 from game_emulator.sandbox import apply_native_core_sandbox
 
-info = apply_native_core_sandbox(Path({sys.executable!r}), Path({str(content)!r}))
+content = Path({str(content)!r})
+info = apply_native_core_sandbox(Path({sys.executable!r}), content)
 assert info["strict"] is True
 assert info["landlock"] is True
 assert info["network"] == "tcp_udp_denied"
@@ -64,6 +71,20 @@ except PermissionError:
     pass
 else:
     raise SystemExit("host file remained readable")
+
+try:
+    (content.parent / "sandbox-write-probe").write_text("must be denied")
+except PermissionError:
+    pass
+else:
+    raise SystemExit("sandbox allowed a host filesystem write")
+
+try:
+    socket.create_connection(("127.0.0.1", {tcp_port}), timeout=0.25)
+except OSError:
+    pass
+else:
+    raise SystemExit("sandbox allowed a TCP connection")
 """
     env = os.environ.copy()
     env["PYTHONPATH"] = str(Path(__file__).parents[1] / "src")
