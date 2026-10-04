@@ -46,15 +46,15 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
     OpenSourceProject(
         "azahar", "Azahar", ("Nintendo 3DS",), "standalone_or_libretro",
         "https://github.com/azahar-emu/azahar", "GPL-2.0-or-later", "catalogued",
-        "Current command-line launch remains unverified and intentionally disabled.",
+        "Current standalone command-line launch remains unverified and disabled.",
     ),
     OpenSourceProject(
         "mgba", "mGBA", ("Nintendo Game Boy", "Nintendo Game Boy Color", "Nintendo Game Boy Advance"), "libretro_or_standalone",
         "https://github.com/mgba-emu/mgba", "MPL-2.0", "upstream_candidate",
-        "Use installed core metadata to confirm exact system and extension support; recheck the exact release license.",
+        "Match installed core .info system and extension metadata; recheck exact release license.",
     ),
     OpenSourceProject(
-        "nestopia", "Nestopia UE", ("Nintendo Entertainment System",), "libretro_core",
+        "nestopia", "Nestopia UE", ("Nintendo NES",), "libretro_core",
         "https://github.com/libretro/nestopia", "GPL-2.0-or-later", "upstream_candidate",
         "Core must be installed locally and its .info metadata must match the target.",
     ),
@@ -66,7 +66,32 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
     OpenSourceProject(
         "snes9x", "Snes9x", ("Nintendo Super Nintendo Entertainment System",), "libretro_or_standalone",
         "https://github.com/snes9xgit/snes9x", "Snes9x", "upstream_candidate",
-        "Non-SPDX license identifier is intentional; inspect upstream license terms before redistribution.",
+        "Libretro's current core license inventory lists Snes9x as non-commercial; do not redistribute without permission.",
+    ),
+    OpenSourceProject(
+        "gambatte", "Gambatte", ("Nintendo Game Boy", "Nintendo Game Boy Color"), "libretro_core",
+        "https://github.com/libretro/gambatte-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Candidate coverage is metadata-driven; no core binary is bundled.",
+    ),
+    OpenSourceProject(
+        "fceumm", "FCEUmm", ("Nintendo NES",), "libretro_core",
+        "https://github.com/libretro/libretro-fceumm", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Candidate coverage is metadata-driven; FDS extension support must match installed .info metadata.",
+    ),
+    OpenSourceProject(
+        "mesen", "Mesen", ("Nintendo NES",), "libretro_core",
+        "https://github.com/libretro/mesen", "GPLv3 (verify exact revision)", "upstream_candidate",
+        "Core may support additional systems; only explicit system/extension metadata is matched.",
+    ),
+    OpenSourceProject(
+        "mupen64plus-next", "Mupen64Plus-Next", ("Nintendo 64",), "libretro_core",
+        "https://github.com/libretro/mupen64plus-libretro-nx", "GPL (verify exact revision)", "upstream_candidate",
+        "N64 content support varies by core build and extension metadata.",
+    ),
+    OpenSourceProject(
+        "beetle-saturn", "Beetle Saturn", ("Sega Saturn",), "libretro_core",
+        "https://github.com/libretro/beetle-saturn-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "Disc formats and firmware requirements must be checked against installed metadata and official docs.",
     ),
 )
 
@@ -88,11 +113,7 @@ def get_project(project_id: str) -> OpenSourceProject | None:
 
 
 def redistribution_eligibility(project_id: str) -> dict[str, str | bool]:
-    """Conservatively assess whether catalog metadata alone clears redistribution.
-
-    Catalog membership never substitutes for reviewing the exact upstream
-    release, dependencies, assets, trademarks, or bundled third-party code.
-    """
+    """Catalog membership never substitutes for exact-release license review."""
     project = get_project(project_id)
     if project is None:
         return {"eligible": False, "status": "unknown_project", "reason": "No verified catalog record."}
