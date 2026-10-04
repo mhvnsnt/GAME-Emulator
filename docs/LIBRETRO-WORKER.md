@@ -28,7 +28,7 @@ Linux strict mode uses Landlock plus `PR_SET_NO_NEW_PRIVS`:
 - the content directory is read-only;
 - filesystem writes, creation, deletion, and truncation handled by the
   available Landlock ABI are denied;
-- strict mode requires Landlock ABI >= 4 for TCP restrictions and installs a
+- strict mode requires Landlock ABI >= 8 for thread-synchronized TCP restrictions and installs a
   seccomp-BPF filter that denies socket/network syscalls, including UDP on older
   kernels; no TCP/UDP network rules are granted by Landlock;
 - pathname UNIX-socket resolution and abstract UNIX-socket/signal scoping are
@@ -36,7 +36,7 @@ Linux strict mode uses Landlock plus `PR_SET_NO_NEW_PRIVS`:
 - CPU, address-space, file-size, descriptor-count, process-count, and core-dump
   limits are lowered with POSIX resource limits.
 
-The policy is **fail-closed** if Landlock is unavailable/below ABI 4 or seccomp
+The policy is **fail-closed** if Landlock is unavailable/below ABI 8 or seccomp
 cannot be installed. This is not a complete container: system calls outside the
 network filter and Landlock policy remain subject to normal kernel permissions.
 CI's host-isolation test will exercise this path when its kernel permits the
