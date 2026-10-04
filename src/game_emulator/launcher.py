@@ -1,4 +1,4 @@
-"""Explicit launch handoff to an installed RetroArch/libretro runtime."""
+"""Explicit, sandboxed launch handoff to an installed RetroArch/libretro runtime."""
 from __future__ import annotations
 
 import argparse
@@ -6,9 +6,10 @@ import hashlib
 import json
 import shutil
 import sqlite3
-import subprocess
 from pathlib import Path
 from typing import Any
+
+from .native_launch import LaunchSandboxError, SandboxLauncher, launch_sandboxed
 
 
 def get_game(library: Path, sha256: str) -> dict[str, Any]:
@@ -18,7 +19,9 @@ def get_game(library: Path, sha256: str) -> dict[str, Any]:
         raise ValueError("library catalog does not exist")
     with sqlite3.connect(database) as connection:
         connection.row_factory = sqlite3.Row
-        row = connection.execute("SELECT * FROM games WHERE sha256 = ?", (sha256.lower(),)).fetchone()
+        row = connection.execute(
+            "SELECT * FROM games WHERE sha256 = ?", (sha256.lower(),)
+        ).fetchone()
     if row is None:
         raise ValueError("SHA-256 was not found in this library")
     game = dict(row)
@@ -46,8 +49,14 @@ def build_command(frontend: str, core: Path, content: Path) -> list[str]:
 
 
 def launch_game(
-    library: Path, sha256: str, *, frontend: str, core: Path,
-    system_override: str | None = None, dry_run: bool = False,
+    library: Path,
+    sha256: str,
+    *,
+    frontend: str,
+    core: Path,
+    system_override: str | None = None,
+    sandbox: SandboxLauncher | None = None,
+    dry_run: bool = False,
 ) -> dict[str, Any]:
     game = get_game(library, sha256)
     system = system_override.strip() if system_override else game["system"]
@@ -73,27 +82,57 @@ def launch_game(
         "command": command,
         "dry_run": dry_run,
         "status": "command_ready",
+        "sandboxed": False,
     }
     if not dry_run:
-        process = subprocess.Popen(command, shell=False, cwd=str(Path(library).expanduser().resolve()))
-        result.update({"status": "launched", "pid": process.pid})
+        try:
+            launched = launch_sandboxed(
+                command,
+                cwd=Path(library).expanduser().resolve(),
+                sandbox=sandbox,
+            )
+        except LaunchSandboxError as exc:
+            raise ValueError(str(exc)) from exc
+        result.update(launched)
     return result
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Explicitly launch a cataloged file using installed RetroArch")
+    parser = argparse.ArgumentParser(
+        description="Launch a cataloged file using installed RetroArch inside an explicit OS sandbox"
+    )
     parser.add_argument("--library", type=Path, default=Path.home() / "GAME-Emulator-Library")
     parser.add_argument("--sha256", required=True, help="hash shown by game-emulator list")
     parser.add_argument("--core", type=Path, required=True, help="installed libretro core shared library")
     parser.add_argument("--frontend", default="retroarch", help="RetroArch executable or full path")
     parser.add_argument("--system", help="explicitly confirm/override an ambiguous system label")
-    parser.add_argument("--dry-run", action="store_true", help="validate paths and print the launch command")
+    parser.add_argument(
+        "--sandbox-launcher",
+        help="explicit OS sandbox wrapper; otherwise GAME_EMULATOR_SANDBOX_LAUNCHER is used",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="validate paths and print the unsandboxed inner command without launching",
+    )
     args = parser.parse_args()
     try:
-        print(json.dumps(launch_game(args.library, args.sha256, frontend=args.frontend,
-                                     core=args.core, system_override=args.system,
-                                     dry_run=args.dry_run), indent=2))
-    except (OSError, ValueError) as exc:
+        sandbox = SandboxLauncher.from_spec(args.sandbox_launcher) if args.sandbox_launcher else None
+        print(
+            json.dumps(
+                launch_game(
+                    args.library,
+                    args.sha256,
+                    frontend=args.frontend,
+                    core=args.core,
+                    system_override=args.system,
+                    sandbox=sandbox,
+                    dry_run=args.dry_run,
+                ),
+                indent=2,
+            )
+        )
+    except (OSError, ValueError, LaunchSandboxError) as exc:
         parser.error(str(exc))
 
 
