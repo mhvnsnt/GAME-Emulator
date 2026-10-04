@@ -80,7 +80,7 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
     ),
     OpenSourceProject(
         "mesen", "Mesen", ("Nintendo NES",), "libretro_core",
-        "https://github.com/libretro/mesen", "GPLv3 (verify exact revision)", "upstream_candidate",
+        "https://github.com/SourMesen/Mesen", "GPLv3 (verify exact revision)", "upstream_candidate",
         "Core may support additional systems; only explicit system/extension metadata is matched.",
     ),
     OpenSourceProject(
@@ -90,7 +90,7 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
     ),
     OpenSourceProject(
         "beetle-saturn", "Beetle Saturn", ("Sega Saturn",), "libretro_core",
-        "https://github.com/libretro/beetle-saturn-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
+        "https://github.com/libretro-mirrors/beetle-saturn-libretro", "GPLv2 (verify exact revision)", "upstream_candidate",
         "Disc formats and firmware requirements must be checked against installed metadata and official docs.",
     ),
 )
