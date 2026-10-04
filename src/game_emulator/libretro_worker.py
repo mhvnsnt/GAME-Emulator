@@ -142,7 +142,7 @@ def run_worker(conn: Connection, core_path: str) -> None:
                 try:
                     result = worker.tick()
                     conn.send({"status": "TICK_COMPLETE", **result})
-                except Exception as exc:
+                except (RuntimeError, OSError, ValueError, KeyError, TypeError) as exc:
                     conn.send(
                         {"status": "ERROR", "error": f"{type(exc).__name__}: {exc}"}
                     )
