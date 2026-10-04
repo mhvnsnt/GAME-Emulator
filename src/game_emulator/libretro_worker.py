@@ -28,8 +28,17 @@ class WorkerError(RuntimeError):
 
 
 class LibretroWorker:
-    def __init__(self, core_path: str) -> None:
+    def __init__(self, core_path: str, system_dir: str | None = None) -> None:
         self.core_path = str(Path(core_path).expanduser().resolve(strict=True))
+        self.system_dir: Path | None = None
+        if system_dir is not None:
+            raw_system_dir = Path(system_dir).expanduser()
+            if raw_system_dir.is_symlink():
+                raise WorkerError("system directory may not be a symbolic link")
+            resolved_system_dir = raw_system_dir.resolve(strict=True)
+            if not resolved_system_dir.is_dir():
+                raise WorkerError("system directory must be a directory")
+            self.system_dir = resolved_system_dir
         self.callbacks = LibretroCallbacks()
         self.core = None
         self._content_path_bytes = None
@@ -42,7 +51,10 @@ class LibretroWorker:
             self.sandbox_info = apply_native_core_sandbox(
                 Path(self.core_path),
                 content,
-                SandboxPolicy(strict=True),
+                SandboxPolicy(
+                    strict=True,
+                    read_only_paths=(self.system_dir,) if self.system_dir else (),
+                ),
             )
             self.core = ctypes.CDLL(self.core_path)
             required = (
@@ -119,8 +131,10 @@ class LibretroWorker:
             self.core = None
 
 
-def run_worker(conn: Connection, core_path: str) -> None:
-    worker = LibretroWorker(core_path)
+def run_worker(
+    conn: Connection, core_path: str, system_dir: str | None = None
+) -> None:
+    worker = LibretroWorker(core_path, system_dir)
     try:
         send_message(conn, {"status": "READY"})
         while True:
@@ -163,11 +177,17 @@ def run_worker(conn: Connection, core_path: str) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run a disposable Libretro core worker")
     parser.add_argument("--core", required=True)
+    parser.add_argument(
+        "--system-dir",
+        help="optional authorized firmware/system directory exposed read-only inside the sandbox",
+    )
     args = parser.parse_args()
     from multiprocessing import Pipe, Process
 
     parent, child = Pipe()
-    process = Process(target=run_worker, args=(child, args.core), daemon=True)
+    process = Process(
+        target=run_worker, args=(child, args.core, args.system_dir), daemon=True
+    )
     process.start()
     child.close()
     try:
