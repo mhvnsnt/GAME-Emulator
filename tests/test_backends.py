@@ -1,4 +1,4 @@
-from game_emulator.backends import Backend, candidates, command_for, discover_backends
+from game_emulator.backends import candidates, command_for, discover_backends
 
 
 def test_backend_registry_does_not_claim_uninstalled_runtime_is_runnable(monkeypatch):
