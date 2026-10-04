@@ -167,8 +167,15 @@ def _add_path_rule(
         os.close(fd)
 
 
-def _apply_linux_landlock(core_path: Path, content_path: Path) -> None:
+def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
     abi, (create, add_rule, restrict) = _landlock_abi()
+    # ABI 10 is required for both TCP and UDP network restrictions. Older
+    # kernels can block TCP but leave UDP available; reporting those as
+    # "network denied" would overstate the security boundary.
+    if abi < 10:
+        raise SandboxError(
+            "Linux strict mode requires Landlock ABI >= 10 for TCP and UDP restrictions"
+        )
 
     fs = (
         _LANDLOCK_ACCESS_FS_EXECUTE
@@ -202,9 +209,9 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> None:
     if abi >= 10:
         net |= _LANDLOCK_ACCESS_NET_BIND_UDP | _LANDLOCK_ACCESS_NET_CONNECT_SEND_UDP
 
-    scoped = 0
-    if abi >= 6:
-        scoped = _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET
+    # Prevent the confined process from using abstract Unix sockets or
+    # signaling processes outside its Landlock domain when supported.
+    scoped = _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET | _LANDLOCK_SCOPE_SIGNAL
 
     attr = _RulesetAttr(handled_access_fs=fs, handled_access_net=net, scoped=scoped)
     ruleset_fd = _syscall(
@@ -248,6 +255,7 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> None:
             raise SandboxError(f"Landlock enforcement failed: {os.strerror(err)}")
     finally:
         os.close(ruleset_fd)
+    return abi
 
 
 def _apply_unix_limits(policy: SandboxPolicy) -> None:
@@ -369,19 +377,15 @@ def apply_native_core_sandbox(
     _apply_unix_limits(policy) if system in {"Linux", "Darwin"} else None
 
     if system == "Linux":
-        _apply_linux_landlock(core_path, content_path)
-        abi, _ = _landlock_abi()
-        network_status = "denied" if abi >= 4 else "not_supported"
-        if policy.strict and abi < 4:
-            raise SandboxError(
-                "Linux strict mode requires Landlock network restriction support (ABI >= 4)"
-            )
+        abi = _apply_linux_landlock(core_path, content_path)
         return {
             "platform": system,
             "strict": True,
             "landlock": True,
             "landlock_abi": abi,
-            "network": network_status,
+            "network": "tcp_udp_denied",
+            "scoped_abstract_unix_sockets": abi >= 6,
+            "scoped_signals": abi >= 6,
         }
     if system == "Windows":
         _apply_windows_job_limits(policy)
