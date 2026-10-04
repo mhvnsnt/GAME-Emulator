@@ -18,8 +18,17 @@ class CoreTimeout(TimeoutError):
 
 
 class IsolatedCore:
-    def __init__(self, core_path: Path) -> None:
+    def __init__(self, core_path: Path, system_dir: Path | None = None) -> None:
         self.core_path = Path(core_path).expanduser().resolve(strict=True)
+        self.system_dir: Path | None = None
+        if system_dir is not None:
+            raw_system_dir = Path(system_dir).expanduser()
+            if raw_system_dir.is_symlink():
+                raise ValueError("system directory may not be a symbolic link")
+            resolved_system_dir = raw_system_dir.resolve(strict=True)
+            if not resolved_system_dir.is_dir():
+                raise ValueError("system directory must be a directory")
+            self.system_dir = resolved_system_dir
         self.parent = None
         self.process = None
 
@@ -27,7 +36,13 @@ class IsolatedCore:
         ctx = mp.get_context("spawn")
         self.parent, child = ctx.Pipe()
         self.process = ctx.Process(
-            target=run_worker, args=(child, str(self.core_path)), daemon=True
+            target=run_worker,
+            args=(
+                child,
+                str(self.core_path),
+                str(self.system_dir) if self.system_dir else None,
+            ),
+            daemon=True
         )
         self.process.start()
         child.close()
@@ -86,8 +101,13 @@ class IsolatedCore:
         self.parent = self.process = None
 
 
-def smoke_test(core_path: Path, content_path: Path, timeout: float = 5.0) -> dict[str, Any]:
-    runner = IsolatedCore(core_path)
+def smoke_test(
+    core_path: Path,
+    content_path: Path,
+    timeout: float = 5.0,
+    system_dir: Path | None = None,
+) -> dict[str, Any]:
+    runner = IsolatedCore(core_path, system_dir)
     try:
         runner.start(timeout=min(timeout, 3.0))
         return runner.smoke_one_frame(content_path)
