@@ -10,21 +10,7 @@ def test_inventory_uses_libretro_database_for_multisystem_info(tmp_path: Path):
     info.mkdir()
     (cores / "mesence_libretro.so").write_bytes(b"not executed")
     (info / "mesence_libretro.info").write_text(
-        'display_name = "Mesen"
-'
-        'supported_extensions = "nes|fds|sfc|gb|gbc|gba"
-'
-        'systemname = "Multi-System"
-'
-        'database = "Nintendo - Nintendo Entertainment System|'
-        'Nintendo - Family Computer Disk System|Nintendo Super Nintendo Entertainment System"
-'
-        'systemid = "nes"
-'
-        'license = "GPLv3"
-'
-        'permissions = ""
-',
+        """display_name = \"Mesen\"\nsupported_extensions = \"nes|fds|sfc|gb|gbc|gba\"\nsystemname = \"Multi-System\"\ndatabase = \"Nintendo - Nintendo Entertainment System|Nintendo - Family Computer Disk System|Nintendo Super Nintendo Entertainment System\"\nsystemid = \"nes\"\nlicense = \"GPLv3\"\npermissions = \"\"\n""",
         encoding="utf-8",
     )
 
