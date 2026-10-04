@@ -29,10 +29,10 @@ class SandboxError(RuntimeError):
 class SandboxPolicy:
     strict: bool = True
     max_cpu_seconds: int = 10
-    max_address_space: int = 1024 * 1024 * 1024
+    max_address_space: int = 2 * 1024 * 1024 * 1024
     max_file_size: int = 8 * 1024 * 1024
     max_open_files: int = 256
-    max_processes: int = 32
+    max_processes: int = 64
 
 
 # Linux Landlock constants.  The syscall numbers are stable for the supported
