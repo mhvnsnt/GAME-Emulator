@@ -65,6 +65,20 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "flycast": (
         ("Sega - Dreamcast/NAOMI", ("cdi", "gdi", "chd", "cue", "bin", "elf", "zip")),
     ),
+    "mesence": (
+        ("Nintendo - Nintendo Entertainment System", ("nes", "fds", "unf", "unif")),
+        ("Nintendo - Family Computer Disk System", ("fds",)),
+        ("Nintendo Super Nintendo Entertainment System", ("sfc", "smc", "swc", "fig", "bs")),
+        ("Nintendo Game Boy", ("gb",)),
+        ("Nintendo Game Boy Color", ("gbc",)),
+        ("Nintendo Game Boy Advance", ("gba",)),
+        ("NEC - PC Engine", ("pce", "sgx")),
+        ("NEC - PC Engine CD", ("cue",)),
+        ("Sega - Master System", ("sms",)),
+        ("Sega - Game Gear", ("gg",)),
+        ("Bandai - WonderSwan", ("ws",)),
+        ("Bandai - WonderSwan Color", ("wsc",)),
+    ),
     "beetle-psx": (
         ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u")),
     ),
