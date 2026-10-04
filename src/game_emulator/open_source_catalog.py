@@ -90,8 +90,8 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
     ),
     OpenSourceProject(
         "scummvm", "ScummVM", ("classic adventure game engines",), "libretro_core_or_standalone",
-        "https://github.com/scummvm/scummvm", "GPLv2 (Libretro core docs; verify exact build)", "upstream_candidate",
-        "Libretro core uses .scummvm launch-hook files and user-supplied game data; not a generic ROM core.",
+        "https://github.com/scummvm/scummvm", "GPLv2/GPLv3 discrepancy (verify exact build)", "upstream_candidate",
+        "Libretro license inventory and core page differ; reconcile exact build license. Core uses .scummvm hooks and user-supplied game data.",
     ),
     OpenSourceProject(
         "mesen", "Mesen", ("Nintendo NES",), "libretro_core",
