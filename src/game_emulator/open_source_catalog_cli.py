@@ -87,7 +87,7 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
         ("Bandai - WonderSwan Color", ("wsc",)),
     ),
     "beetle-psx": (
-        ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u")),
+        ("Sony PlayStation", ("cue", "ccd", "chd", "pbp", "toc", "m3u", "bin", "img", "iso", "mdf", "ecm")),
     ),
     "beetle-saturn": (
         ("Sega Saturn", ("cue", "toc", "m3u", "ccd", "chd")),
