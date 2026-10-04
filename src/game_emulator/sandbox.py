@@ -370,7 +370,19 @@ def apply_native_core_sandbox(
 
     if system == "Linux":
         _apply_linux_landlock(core_path, content_path)
-        return {"platform": system, "strict": True, "landlock": True, "network": "denied"}
+        abi, _ = _landlock_abi()
+        network_status = "denied" if abi >= 4 else "not_supported"
+        if policy.strict and abi < 4:
+            raise SandboxError(
+                "Linux strict mode requires Landlock network restriction support (ABI >= 4)"
+            )
+        return {
+            "platform": system,
+            "strict": True,
+            "landlock": True,
+            "landlock_abi": abi,
+            "network": network_status,
+        }
     if system == "Windows":
         _apply_windows_job_limits(policy)
         if policy.strict:
