@@ -21,7 +21,7 @@ not "installed", "runnable", or "certified".
 | mGBA | Game Boy / Game Boy Color / Game Boy Advance | MPL-2.0 | Upstream candidate; requires installed core/metadata |
 | Nestopia UE | NES | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
 | Beetle PSX | PlayStation | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
-| Snes9x | Super Nintendo | Snes9x-specific terms | Upstream candidate; manual license review required |
+| Snes9x | Super Nintendo | Non-commercial in Libretro core inventory | Upstream candidate; redistribution requires permission review |\n| Gambatte | Game Boy / Game Boy Color | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| FCEUmm | NES / Famicom | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| Mesen | NES / Famicom | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |\n| Mupen64Plus-Next | Nintendo 64 | Verify exact revision | Upstream candidate; local metadata required |\n| Beetle Saturn | Sega Saturn | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection only; no host execution |
 
 The upstream Libretro core catalog lists many more systems and cores, but a catalog
@@ -68,3 +68,15 @@ verified and its execution contract can be sandboxed.
 
 This distinction is intentional: "recognized", "supported by a backend", and
 "verified runnable on this machine" are three different states.
+
+
+## Linux containment gate
+
+The Libretro worker's strict Landlock path now requires ABI 10 before it reports
+TCP/UDP network denial. Older Landlock versions may restrict TCP while leaving UDP
+available, so they fail closed instead of being labeled as network-isolated.
+The worker also applies process resource limits and `no_new_privs`; this is not a
+claim that all host interfaces are unavailable. CI's mocked policy tests validate
+the fail-closed decision and reported status, not actual kernel containment. A real
+containment test must run in a host where Landlock is permitted and demonstrate
+blocked filesystem writes and network access before native launch can be certified.
