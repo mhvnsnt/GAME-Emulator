@@ -22,6 +22,10 @@ not "installed", "runnable", or "certified".
 | Nestopia UE | NES | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
 | Beetle PSX | PlayStation | GPL-2.0-or-later | Upstream candidate; requires installed core/metadata |
 | Snes9x | Super Nintendo | Non-commercial in Libretro core inventory | Upstream candidate; redistribution requires permission review |\n| Gambatte | Game Boy / Game Boy Color | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| FCEUmm | NES / Famicom | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |\n| Mesen | NES / Famicom | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |\n| Mupen64Plus-Next | Nintendo 64 | Verify exact revision | Upstream candidate; local metadata required |\n| Beetle Saturn | Sega Saturn | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| Beetle GBA | Game Boy Advance | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| Beetle bsnes | Super Nintendo | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
+| Mesen-S | SNES / Game Boy / Game Boy Color | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
+| Flycast | Dreamcast / NAOMI | GPLv2 | Upstream candidate; local metadata required |
 | Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection only; no host execution |
 
 The upstream Libretro core catalog lists many more systems and cores, but a catalog
