@@ -1,0 +1,390 @@
+"""OS-level restrictions for the native Libretro worker.
+
+The sandbox is applied in the worker immediately before ctypes loads the native core.
+It is deliberately fail-closed in strict mode: unsupported platforms do not silently
+pretend to provide a filesystem/network security boundary.
+
+Linux uses Landlock for filesystem/network policy plus no_new_privs and Unix resource
+limits. Windows currently applies a Job Object resource/process boundary; the full
+AppContainer/LPAC launch path remains a separate launcher because AppContainer must
+be established when the process is created. macOS likewise requires a launch-time
+Seatbelt/App Sandbox wrapper.
+"""
+from __future__ import annotations
+
+import ctypes
+import errno
+import os
+import platform
+import resource
+from dataclasses import dataclass
+from pathlib import Path
+
+
+class SandboxError(RuntimeError):
+    """Raised when the requested native-core security boundary cannot be established."""
+
+
+@dataclass(frozen=True)
+class SandboxPolicy:
+    strict: bool = True
+    max_cpu_seconds: int = 10
+    max_address_space: int = 1024 * 1024 * 1024
+    max_file_size: int = 8 * 1024 * 1024
+    max_open_files: int = 256
+    max_processes: int = 32
+
+
+# Linux Landlock constants.  The syscall numbers are stable for the supported
+# Linux architectures; unsupported architectures fail closed.
+_LANDLOCK_CREATE_RULESET_VERSION = 1
+_LANDLOCK_RULE_PATH_BENEATH = 1
+_LANDLOCK_RESTRICT_SELF = 1
+_LANDLOCK_CREATE_RULESET_VERSION_FLAG = 1
+
+_LANDLOCK_ACCESS_FS_EXECUTE = 1 << 0
+_LANDLOCK_ACCESS_FS_WRITE_FILE = 1 << 1
+_LANDLOCK_ACCESS_FS_READ_FILE = 1 << 2
+_LANDLOCK_ACCESS_FS_READ_DIR = 1 << 3
+_LANDLOCK_ACCESS_FS_REMOVE_DIR = 1 << 4
+_LANDLOCK_ACCESS_FS_REMOVE_FILE = 1 << 5
+_LANDLOCK_ACCESS_FS_MAKE_CHAR = 1 << 6
+_LANDLOCK_ACCESS_FS_MAKE_DIR = 1 << 7
+_LANDLOCK_ACCESS_FS_MAKE_REG = 1 << 8
+_LANDLOCK_ACCESS_FS_MAKE_SOCK = 1 << 9
+_LANDLOCK_ACCESS_FS_MAKE_FIFO = 1 << 10
+_LANDLOCK_ACCESS_FS_MAKE_BLOCK = 1 << 11
+_LANDLOCK_ACCESS_FS_MAKE_SYM = 1 << 12
+_LANDLOCK_ACCESS_FS_REFER = 1 << 13
+_LANDLOCK_ACCESS_FS_TRUNCATE = 1 << 14
+_LANDLOCK_ACCESS_FS_IOCTL_DEV = 1 << 15
+_LANDLOCK_ACCESS_FS_EXECUTE = _LANDLOCK_ACCESS_FS_EXECUTE
+
+_LANDLOCK_ACCESS_NET_BIND_TCP = 1 << 0
+_LANDLOCK_ACCESS_NET_CONNECT_TCP = 1 << 1
+_LANDLOCK_ACCESS_NET_BIND_UDP = 1 << 2
+_LANDLOCK_ACCESS_NET_CONNECT_SEND_UDP = 1 << 3
+
+_LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET = 1 << 0
+_LANDLOCK_SCOPE_SIGNAL = 1 << 1
+
+_PR_SET_NO_NEW_PRIVS = 38
+
+# Landlock was added at syscall numbers 444..446 on the architectures we
+# support explicitly here.
+_LANDLOCK_SYSCALLS = {
+    "x86_64": (444, 445, 446),
+    "amd64": (444, 445, 446),
+    "aarch64": (444, 445, 446),
+    "arm64": (444, 445, 446),
+    "riscv64": (444, 445, 446),
+    "ppc64le": (444, 445, 446),
+}
+
+
+class _RulesetAttr(ctypes.Structure):
+    _fields_ = [
+        ("handled_access_fs", ctypes.c_uint64),
+        ("handled_access_net", ctypes.c_uint64),
+        ("scoped", ctypes.c_uint64),
+    ]
+
+
+class _PathBeneathAttr(ctypes.Structure):
+    _fields_ = [
+        ("allowed_access", ctypes.c_uint64),
+        ("parent_fd", ctypes.c_int32),
+        ("_padding", ctypes.c_uint32),
+    ]
+
+
+def _libc() -> ctypes.CDLL:
+    return ctypes.CDLL(None, use_errno=True)
+
+
+def _syscall_numbers() -> tuple[int, int, int]:
+    try:
+        return _LANDLOCK_SYSCALLS[platform.machine().lower()]
+    except KeyError as exc:
+        raise SandboxError(
+            f"Landlock syscall numbers are not defined for {platform.machine()}"
+        ) from exc
+
+
+def _syscall(number: int, *args: object) -> int:
+    libc = _libc()
+    libc.syscall.restype = ctypes.c_long
+    return int(libc.syscall(number, *args))
+
+
+def _set_no_new_privs() -> None:
+    if _syscall(_PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0, 0) != 0:
+        err = ctypes.get_errno()
+        raise SandboxError(f"PR_SET_NO_NEW_PRIVS failed: {os.strerror(err)}")
+
+
+def _landlock_abi() -> tuple[int, tuple[int, int, int]]:
+    create, _, _ = _syscall_numbers()
+    abi = _syscall(create, None, 0, _LANDLOCK_CREATE_RULESET_VERSION_FLAG)
+    if abi < 0:
+        err = ctypes.get_errno()
+        raise SandboxError(f"Landlock unavailable: {os.strerror(err)}")
+    return abi, (create, *_syscall_numbers()[1:])
+
+
+def _readable_system_roots() -> list[Path]:
+    roots = [Path("/usr"), Path("/lib"), Path("/lib64"), Path("/usr/local/lib")]
+    return [root for root in roots if root.exists()]
+
+
+def _add_path_rule(
+    add_rule_syscall: int, ruleset_fd: int, path: Path, allowed_access: int
+) -> None:
+    flags = os.O_PATH | os.O_CLOEXEC
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        raise SandboxError(f"cannot open sandbox path {path}: {exc}") from exc
+    try:
+        rule = _PathBeneathAttr(
+            allowed_access=allowed_access,
+            parent_fd=fd,
+            _padding=0,
+        )
+        result = _syscall(
+            add_rule_syscall,
+            ruleset_fd,
+            _LANDLOCK_RULE_PATH_BENEATH,
+            ctypes.byref(rule),
+            0,
+        )
+        if result != 0:
+            err = ctypes.get_errno()
+            raise SandboxError(f"Landlock rule for {path} failed: {os.strerror(err)}")
+    finally:
+        os.close(fd)
+
+
+def _apply_linux_landlock(core_path: Path, content_path: Path) -> None:
+    abi, (create, add_rule, restrict) = _landlock_abi()
+
+    fs = (
+        _LANDLOCK_ACCESS_FS_EXECUTE
+        | _LANDLOCK_ACCESS_FS_READ_FILE
+        | _LANDLOCK_ACCESS_FS_READ_DIR
+    )
+    # Handle every filesystem write/create/delete operation supported by this
+    # kernel ABI.  No rule grants any of them, so they are denied by default.
+    fs |= (
+        _LANDLOCK_ACCESS_FS_WRITE_FILE
+        | _LANDLOCK_ACCESS_FS_REMOVE_DIR
+        | _LANDLOCK_ACCESS_FS_REMOVE_FILE
+        | _LANDLOCK_ACCESS_FS_MAKE_CHAR
+        | _LANDLOCK_ACCESS_FS_MAKE_DIR
+        | _LANDLOCK_ACCESS_FS_MAKE_REG
+        | _LANDLOCK_ACCESS_FS_MAKE_SOCK
+        | _LANDLOCK_ACCESS_FS_MAKE_FIFO
+        | _LANDLOCK_ACCESS_FS_MAKE_BLOCK
+        | _LANDLOCK_ACCESS_FS_MAKE_SYM
+    )
+    if abi >= 2:
+        fs |= _LANDLOCK_ACCESS_FS_REFER
+    if abi >= 3:
+        fs |= _LANDLOCK_ACCESS_FS_TRUNCATE
+    if abi >= 5:
+        fs |= _LANDLOCK_ACCESS_FS_IOCTL_DEV
+
+    net = 0
+    if abi >= 4:
+        net |= _LANDLOCK_ACCESS_NET_BIND_TCP | _LANDLOCK_ACCESS_NET_CONNECT_TCP
+    if abi >= 10:
+        net |= _LANDLOCK_ACCESS_NET_BIND_UDP | _LANDLOCK_ACCESS_NET_CONNECT_SEND_UDP
+
+    scoped = 0
+    if abi >= 6:
+        scoped = _LANDLOCK_SCOPE_ABSTRACT_UNIX_SOCKET
+
+    attr = _RulesetAttr(handled_access_fs=fs, handled_access_net=net, scoped=scoped)
+    ruleset_fd = _syscall(
+        create,
+        ctypes.byref(attr),
+        ctypes.sizeof(attr),
+        0,
+    )
+    if ruleset_fd < 0:
+        err = ctypes.get_errno()
+        raise SandboxError(f"Landlock ruleset creation failed: {os.strerror(err)}")
+
+    try:
+        read_access = _LANDLOCK_ACCESS_FS_READ_FILE | _LANDLOCK_ACCESS_FS_READ_DIR
+        execute_access = _LANDLOCK_ACCESS_FS_EXECUTE
+
+        # Native shared libraries may need the dynamic loader and libc. They are
+        # read-only and executable; no write access is ever granted.
+        for root in _readable_system_roots():
+            _add_path_rule(add_rule, ruleset_fd, root, read_access | execute_access)
+
+        # The core directory is exposed read/execute only. Content is exposed
+        # read-only through its containing directory so normal path resolution
+        # works for cores that inspect adjacent metadata.
+        _add_path_rule(
+            add_rule,
+            ruleset_fd,
+            core_path.parent,
+            read_access | execute_access,
+        )
+        _add_path_rule(
+            add_rule,
+            ruleset_fd,
+            content_path.parent,
+            read_access,
+        )
+
+        _set_no_new_privs()
+        if _syscall(restrict, ruleset_fd, 0) != 0:
+            err = ctypes.get_errno()
+            raise SandboxError(f"Landlock enforcement failed: {os.strerror(err)}")
+    finally:
+        os.close(ruleset_fd)
+
+
+def _apply_unix_limits(policy: SandboxPolicy) -> None:
+    limits = (
+        ("RLIMIT_CPU", policy.max_cpu_seconds),
+        ("RLIMIT_FSIZE", policy.max_file_size),
+        ("RLIMIT_NOFILE", policy.max_open_files),
+        ("RLIMIT_NPROC", policy.max_processes),
+        ("RLIMIT_AS", policy.max_address_space),
+    )
+    for name, value in limits:
+        resource_id = getattr(resource, name, None)
+        if resource_id is None:
+            continue
+        try:
+            resource.setrlimit(resource_id, (value, value))
+        except (OSError, ValueError) as exc:
+            raise SandboxError(f"{name} limit failed: {exc}") from exc
+    core_limit = getattr(resource, "RLIMIT_CORE", None)
+    if core_limit is not None:
+        resource.setrlimit(core_limit, (0, 0))
+
+
+def _apply_windows_job_limits(policy: SandboxPolicy) -> None:
+    # This is intentionally limited to a Job Object boundary. Windows
+    # filesystem/network isolation requires AppContainer/LPAC at process
+    # creation time and cannot be retrofitted safely into an already-running
+    # multiprocessing child.
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateJobObjectW.restype = ctypes.c_void_p
+    job = kernel32.CreateJobObjectW(None, None)
+    if not job:
+        raise SandboxError(
+            f"CreateJobObjectW failed: {ctypes.get_last_error()}"
+        )
+
+    JOB_OBJECT_LIMIT_ACTIVE_PROCESS = 0x00000008
+    JOB_OBJECT_LIMIT_PROCESS_MEMORY = 0x00000100
+    JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
+    JOB_OBJECT_LIMIT_JOB_MEMORY = 0x00000200
+
+    class BasicLimitInfo(ctypes.Structure):
+        _fields_ = [
+            ("PerProcessUserTimeLimit", ctypes.c_int64),
+            ("PerJobUserTimeLimit", ctypes.c_int64),
+            ("LimitFlags", ctypes.c_uint32),
+            ("MinimumWorkingSetSize", ctypes.c_size_t),
+            ("MaximumWorkingSetSize", ctypes.c_size_t),
+            ("ActiveProcessLimit", ctypes.c_uint32),
+            ("Affinity", ctypes.c_size_t),
+            ("PriorityClass", ctypes.c_uint32),
+            ("SchedulingClass", ctypes.c_uint32),
+        ]
+
+    class ExtendedLimitInfo(ctypes.Structure):
+        _fields_ = [
+            ("BasicLimitInformation", BasicLimitInfo),
+            ("IoInfo", ctypes.c_uint64 * 6),
+            ("ProcessMemoryLimit", ctypes.c_size_t),
+            ("JobMemoryLimit", ctypes.c_size_t),
+            ("PeakProcessMemoryUsed", ctypes.c_size_t),
+            ("PeakJobMemoryUsed", ctypes.c_size_t),
+        ]
+
+    limits = ExtendedLimitInfo()
+    limits.BasicLimitInformation.LimitFlags = (
+        JOB_OBJECT_LIMIT_ACTIVE_PROCESS
+        | JOB_OBJECT_LIMIT_PROCESS_MEMORY
+        | JOB_OBJECT_LIMIT_JOB_MEMORY
+        | JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    )
+    limits.BasicLimitInformation.ActiveProcessLimit = policy.max_processes
+    limits.ProcessMemoryLimit = policy.max_address_space
+    limits.JobMemoryLimit = policy.max_address_space
+
+    JOB_OBJECT_EXTENDED_LIMIT_INFORMATION = 9
+    if not kernel32.SetInformationJobObject(
+        job,
+        JOB_OBJECT_EXTENDED_LIMIT_INFORMATION,
+        ctypes.byref(limits),
+        ctypes.sizeof(limits),
+    ):
+        err = ctypes.get_last_error()
+        kernel32.CloseHandle(job)
+        raise SandboxError(f"SetInformationJobObject failed: {err}")
+
+    if not kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
+        err = ctypes.get_last_error()
+        kernel32.CloseHandle(job)
+        raise SandboxError(f"AssignProcessToJobObject failed: {err}")
+
+    # Keep the job handle alive for the lifetime of the worker.
+    global _WINDOWS_JOB_HANDLE
+    _WINDOWS_JOB_HANDLE = job
+
+
+def apply_native_core_sandbox(
+    core_path: Path,
+    content_path: Path,
+    policy: SandboxPolicy | None = None,
+) -> dict[str, object]:
+    """Apply restrictions before native loading.
+
+    Strict mode is fail-closed. An explicit development override may be used
+    only by setting GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE=1.
+    """
+    policy = policy or SandboxPolicy()
+    core_path = Path(core_path).resolve(strict=True)
+    content_path = Path(content_path).resolve(strict=True)
+
+    if os.environ.get("GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE") == "1":
+        if policy.strict:
+            return {"platform": platform.system(), "strict": False, "override": True}
+        return {"platform": platform.system(), "strict": False, "override": True}
+
+    system = platform.system()
+    _apply_unix_limits(policy) if system in {"Linux", "Darwin"} else None
+
+    if system == "Linux":
+        _apply_linux_landlock(core_path, content_path)
+        return {"platform": system, "strict": True, "landlock": True, "network": "denied"}
+    if system == "Windows":
+        _apply_windows_job_limits(policy)
+        if policy.strict:
+            raise SandboxError(
+                "Windows strict mode requires launch-time AppContainer/LPAC; "
+                "Job Objects alone are not a filesystem/network sandbox"
+            )
+        return {"platform": system, "strict": False, "job_object": True}
+    if system == "Darwin":
+        if policy.strict:
+            raise SandboxError(
+                "macOS strict mode requires a launch-time Seatbelt/App Sandbox wrapper"
+            )
+        return {"platform": system, "strict": False}
+
+    if policy.strict:
+        raise SandboxError(f"No strict native-core sandbox is implemented for {system}")
+    return {"platform": system, "strict": False}
+
+
+_WINDOWS_JOB_HANDLE = None
