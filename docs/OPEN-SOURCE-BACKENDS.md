@@ -8,10 +8,10 @@ ROMs, BIOS files, keys, firmware, or proprietary game content into this reposito
 | RetroArch / Libretro | Broad multi-system core ecosystem | RetroArch GPL-3.0; Libretro API MIT | Installed-core inventory + isolated ctypes worker |
 | Dolphin | GameCube / Wii | GPL-2.0-or-later | Capability registry; dedicated launcher next |
 | PCSX2 | PlayStation 2 | GPL-3.0-or-later | Capability registry; dedicated launcher next |
-| Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection; Android launch adapter next |
+| PPSSPP | PlayStation Portable | GPL-2.0-or-later | Capability registry; dedicated launcher next |\n| Azahar | Nintendo 3DS | GPL-2.0-or-later | Capability registry; dedicated launcher next |\n| Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection; Android launch adapter next |
 
 The Libretro core catalog already includes examples for PlayStation, GameCube/Wii,
-Xbox, PSP, Dreamcast, Nintendo handhelds/consoles and many other systems. Core
+Xbox, PSP, Dreamcast, Nintendo handhelds/consoles and many other systems. PPSSPP is also available as a standalone open-source PSP runtime, and Azahar is an open-source 3DS emulator project. Core
 selection remains metadata- and installation-driven.
 
 ## Integration rule
