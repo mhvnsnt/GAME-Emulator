@@ -64,6 +64,16 @@ PROJECTS: tuple[OpenSourceProject, ...] = (
         "Core must be installed locally; required firmware is never supplied here.",
     ),
     OpenSourceProject(
+        "beetle-psx-hw", "Beetle PSX HW", ("Sony PlayStation",), "libretro_core",
+        "https://github.com/libretro/beetle-psx-libretro", "GPL-2.0-or-later", "upstream_candidate",
+        "Hardware-rendered PS1 variant; required firmware is never supplied here. Verify exact installed metadata before use.",
+    ),
+    OpenSourceProject(
+        "pcsx-rearmed", "PCSX ReARMed", ("Sony PlayStation",), "libretro_core",
+        "https://github.com/libretro/pcsx_rearmed", "GPL-2.0-or-later", "upstream_candidate",
+        "Low-power PS1 core candidate; required firmware is never supplied here. Verify exact installed metadata before use.",
+    ),
+    OpenSourceProject(
         "snes9x", "Snes9x", ("Nintendo Super Nintendo Entertainment System",), "libretro_or_standalone",
         "https://github.com/snes9xgit/snes9x", "Snes9x", "upstream_candidate",
         "Libretro's current core license inventory lists Snes9x as non-commercial; do not redistribute without permission.",
