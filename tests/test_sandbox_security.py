@@ -7,7 +7,7 @@ from game_emulator import sandbox
 
 def test_landlock_strict_policy_rejects_abi_without_tcp_restriction(monkeypatch):
     monkeypatch.setattr(sandbox, "_landlock_abi", lambda: (3, (444, 445, 446)))
-    with pytest.raises(sandbox.SandboxError, match="ABI >= 4"):
+    with pytest.raises(sandbox.SandboxError, match="ABI >= 8"):
         sandbox._apply_linux_landlock(Path("/core.so"), Path("/game.rom"))
 
 
@@ -28,7 +28,7 @@ def test_linux_sandbox_report_only_claims_tcp_udp_denial_after_policy_succeeds(
 
     assert result["strict"] is True
     assert result["landlock_abi"] == 8
-    assert result["network"] == "socket_syscalls_denied_by_seccomp_and_tcp_by_landlock"
+    assert result["network"] == "socket_syscalls_denied_by_process_wide_seccomp_and_tcp_by_landlock"
     assert result["seccomp_network_filter"] is True
     assert result["udp_restricted_by_landlock"] is False
     assert result["scoped_abstract_unix_sockets"] is True
