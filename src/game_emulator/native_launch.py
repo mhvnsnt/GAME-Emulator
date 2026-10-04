@@ -1,26 +1,28 @@
 """Explicit process-launch boundary for native emulator backends.
 
-Native emulator binaries are not trusted merely because they are installed locally.
-This module refuses a real launch unless the caller supplies an external OS sandbox
-launcher. Platform-specific profiles own the actual isolation policy; we never guess
-a sandbox command.
+A configured wrapper is not proof of a sandbox: arbitrary commands can be no-ops
+or can leave host access unrestricted. Until a platform-specific policy is
+implemented and verified, this module supports command previews only and refuses
+real native launches. Never infer containment from multiprocessing or a wrapper
+name alone.
 """
 from __future__ import annotations
 
 import os
 import shlex
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 
 class LaunchSandboxError(RuntimeError):
-    """Raised when a native launch has no explicit OS sandbox boundary."""
+    """Raised when a native launch has no verified OS sandbox policy."""
 
 
 @dataclass(frozen=True)
 class SandboxLauncher:
+    """A syntactically resolved wrapper command; not a security attestation."""
+
     executable: str
     prefix_args: tuple[str, ...] = ()
     separator: str = "--"
@@ -50,8 +52,7 @@ def sandbox_launcher_from_environment() -> SandboxLauncher:
     spec = os.environ.get("GAME_EMULATOR_SANDBOX_LAUNCHER")
     if not spec:
         raise LaunchSandboxError(
-            "native launch refused: set GAME_EMULATOR_SANDBOX_LAUNCHER "
-            "to an explicit OS sandbox wrapper"
+            "native launch refused: no explicit OS sandbox wrapper is configured"
         )
     return SandboxLauncher.from_spec(spec)
 
@@ -63,16 +64,25 @@ def launch_sandboxed(
     sandbox: SandboxLauncher | None = None,
     dry_run: bool = False,
 ) -> dict[str, object]:
+    """Preview a wrapped command; refuse execution until policy enforcement exists.
+
+    The current generic wrapper contract does not prove that the wrapper applies
+    filesystem, network, process, and resource restrictions. Dry-runs are useful
+    for inspecting argv, but a real launch would be misleadingly unsafe here.
+    """
     wrapper = sandbox or sandbox_launcher_from_environment()
     wrapped = wrapper.wrap(command)
     result: dict[str, object] = {
         "command": wrapped,
-        "sandboxed": True,
+        "sandboxed": False,
+        "sandbox_wrapper_configured": True,
+        "security_status": "unverified-policy",
         "dry_run": dry_run,
     }
     if not dry_run:
-        process = subprocess.Popen(wrapped, shell=False, cwd=str(cwd))
-        result.update({"status": "launched", "pid": process.pid})
-    else:
-        result["status"] = "command_ready"
+        raise LaunchSandboxError(
+            "native launch refused: wrapper command is not a verified OS sandbox policy; "
+            "platform-specific containment must be implemented first"
+        )
+    result["status"] = "command_preview_only"
     return result
