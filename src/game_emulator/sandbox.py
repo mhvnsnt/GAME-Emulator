@@ -4,8 +4,8 @@ The sandbox is applied in the worker immediately before ctypes loads the native 
 It is deliberately fail-closed in strict mode: unsupported platforms do not silently
 pretend to provide a filesystem/network security boundary.
 
-Linux uses Landlock for filesystem/network policy plus no_new_privs and Unix resource
-limits. Windows currently applies a Job Object resource/process boundary; the full
+Linux uses thread-synchronized Landlock, a process-wide seccomp-BPF filter,
+no_new_privs, and Unix resource limits. Windows currently applies a Job Object resource/process boundary; the full
 AppContainer/LPAC launch path remains a separate launcher because AppContainer must
 be established when the process is created. macOS likewise requires a launch-time
 Seatbelt/App Sandbox wrapper.
