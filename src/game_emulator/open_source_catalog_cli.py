@@ -11,9 +11,8 @@ from pathlib import Path
 from game_emulator.adapters import compatible_cores, inventory_cores
 from game_emulator.open_source_catalog import list_projects, redistribution_eligibility
 
-# These are curated targets based on upstream Libretro core documentation.
-# Actual local .info metadata remains authoritative: BOTH system and extension
-# must match. This table is a discovery aid, not a claim that a core is installed.
+# These targets are curated from upstream Libretro core docs. Local .info metadata
+# remains authoritative: BOTH system and extension must match.
 LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
     "mgba": (
         ("Nintendo Game Boy Advance", ("gba",)),
@@ -24,6 +23,10 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
         ("Nintendo Game Boy", ("gb",)),
         ("Nintendo Game Boy Color", ("gbc",)),
         ("Game Boy/Color", ("gb", "gbc")),
+    ),
+    "sameboy": (
+        ("Nintendo - Game Boy", ("gb",)),
+        ("Nintendo - Game Boy Color", ("gbc",)),
     ),
     "beetle-gba": (
         ("Nintendo Game Boy Advance", ("gba", "agb", "bin")),
@@ -42,6 +45,10 @@ LIBRETRO_TARGETS: dict[str, tuple[tuple[str, tuple[str, ...]], ...]] = {
         ("Nintendo - Nintendo Entertainment System", ("nes", "unf", "unif")),
         ("Nintendo - Family Computer Disk System", ("fds",)),
         ("Nintendo Famicom Disk System", ("fds",)),
+    ),
+    "quicknes": (
+        ("Nintendo - Nintendo Entertainment System", ("nes",)),
+        ("Nintendo NES", ("nes",)),
     ),
     "mesen": (
         ("Nintendo NES", ("nes", "unf", "unif")),
