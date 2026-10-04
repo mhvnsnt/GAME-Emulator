@@ -10,6 +10,8 @@ be driven by one normalized input stream and their video outputs can be
 composed into a new presentation. Later adapters can add save-state, asset,
 memory, or game-specific transformation support when a backend proves it.
 """
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from typing import Literal
 
