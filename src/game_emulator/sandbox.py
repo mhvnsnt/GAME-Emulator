@@ -61,6 +61,7 @@ _LANDLOCK_ACCESS_FS_MAKE_SYM = 1 << 12
 _LANDLOCK_ACCESS_FS_REFER = 1 << 13
 _LANDLOCK_ACCESS_FS_TRUNCATE = 1 << 14
 _LANDLOCK_ACCESS_FS_IOCTL_DEV = 1 << 15
+_LANDLOCK_ACCESS_FS_RESOLVE_UNIX = 1 << 16
 
 _LANDLOCK_ACCESS_NET_BIND_TCP = 1 << 0
 _LANDLOCK_ACCESS_NET_CONNECT_TCP = 1 << 1
@@ -202,6 +203,8 @@ def _apply_linux_landlock(core_path: Path, content_path: Path) -> int:
         fs |= _LANDLOCK_ACCESS_FS_TRUNCATE
     if abi >= 5:
         fs |= _LANDLOCK_ACCESS_FS_IOCTL_DEV
+    if abi >= 9:
+        fs |= _LANDLOCK_ACCESS_FS_RESOLVE_UNIX
 
     net = 0
     if abi >= 4:
@@ -370,7 +373,9 @@ def apply_native_core_sandbox(
 
     if os.environ.get("GAME_EMULATOR_ALLOW_UNSANDBOXED_CORE") == "1":
         if policy.strict:
-            return {"platform": platform.system(), "strict": False, "override": True}
+            raise SandboxError(
+                "strict native-core sandbox cannot be bypassed by the development override"
+            )
         return {"platform": platform.system(), "strict": False, "override": True}
 
     system = platform.system()
