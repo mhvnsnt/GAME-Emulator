@@ -26,6 +26,7 @@ not "installed", "runnable", or "certified".
 | Beetle bsnes | Super Nintendo | GPLv2 (verify exact revision) | Upstream candidate; local metadata required |
 | Mesen-S | SNES / Game Boy / Game Boy Color | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
 | Flycast | Dreamcast / NAOMI | GPLv2 | Upstream candidate; local metadata required |
+| MesenCE | NES / FDS / SNES / GB / GBC / GBA / PC Engine / Master System / Game Gear / WonderSwan | GPLv3 (verify exact revision) | Upstream candidate; local metadata required |
 | Android runtime | APK/APKS/XAPK | Runtime-dependent | Package detection only; no host execution |
 
 The upstream Libretro core catalog lists many more systems and cores, but a catalog
@@ -37,6 +38,11 @@ entry is not proof of a compatible installed binary. Official references:
 - [mGBA upstream](https://github.com/mgba-emu/mgba)
 - [Nestopia UE upstream](https://github.com/libretro/nestopia)
 - [Beetle PSX upstream](https://github.com/libretro/beetle-psx-libretro)
+- [Official MesenCE Libretro documentation](https://docs.libretro.com/library/mesen2/)
+- [Official Flycast Libretro documentation](https://docs.libretro.com/library/flycast/)
+- [Official Beetle GBA Libretro documentation](https://docs.libretro.com/library/beetle_gba/)
+- [Official Beetle bsnes Libretro documentation](https://docs.libretro.com/library/beetle_bsnes/)
+- [Official Mesen-S Libretro documentation](https://docs.libretro.com/library/mesen-s/)
 
 ## License and provenance gate
 
