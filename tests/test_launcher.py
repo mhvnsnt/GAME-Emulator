@@ -41,7 +41,9 @@ def test_dry_run_builds_argument_list_without_launching(tmp_path: Path):
 
     result = launch_game(library, digest, frontend=str(frontend), core=core, dry_run=True)
 
-    assert result["status"] == "command_ready"
+    assert result["status"] == "command_preview_only"
+    assert result["security_status"] == "unverified-policy"
+    assert result["sandboxed"] is False
     assert result["command"] == [str(frontend.resolve()), "-L", str(core.resolve()), str(content)]
     assert result["dry_run"] is True
 
@@ -71,3 +73,15 @@ def test_ambiguous_disc_needs_explicit_system_confirmation(tmp_path: Path):
     result = launch_game(library, digest, frontend=str(frontend), core=core,
                          system_override="Sony PlayStation 2", dry_run=True)
     assert result["system"] == "Sony PlayStation 2"
+
+
+def test_real_launch_is_refused_until_sandbox_policy_is_verified(tmp_path: Path):
+    library, digest, _content = make_library(tmp_path)
+    frontend = tmp_path / "retroarch"
+    frontend.write_text("synthetic executable placeholder", encoding="utf-8")
+    frontend.chmod(frontend.stat().st_mode | 0o111)
+    core = tmp_path / "core.so"
+    core.write_bytes(b"synthetic core placeholder")
+
+    with pytest.raises(ValueError, match="no explicit OS sandbox wrapper"):
+        launch_game(library, digest, frontend=str(frontend), core=core, dry_run=False)

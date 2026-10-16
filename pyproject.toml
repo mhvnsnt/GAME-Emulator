@@ -19,6 +19,10 @@ game-emulator-ui = "game_emulator.app:main"
 game-emulator-watch-folder = "game_emulator.autowatch:main"
 game-emulator-launch = "game_emulator.launcher:main"
 game-emulator-adapters = "game_emulator.adapters:main"
+game-emulator-backends = "game_emulator.backends:main"
+game-emulator-open-source = "game_emulator.open_source_catalog_cli:main"
+game-emulator-libretro-smoke = "game_emulator.libretro_smoke_cli:main"
+game-emulator-psx-reference = "game_emulator.psx_reference:main"
 game-emulator-watch = "game_emulator.watcher:main"
 
 [tool.setuptools.packages.find]

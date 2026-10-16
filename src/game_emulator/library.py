@@ -41,7 +41,7 @@ SYSTEM_ALIASES = {
     "switch": "Nintendo Switch", "nintendo switch": "Nintendo Switch", "nds": "Nintendo DS",
     "ds": "Nintendo DS", "3ds": "Nintendo 3DS",
     "ps1": "Sony PlayStation", "psx": "Sony PlayStation", "playstation 1": "Sony PlayStation",
-    "playstation": "Sony PlayStation", "ps2": "Sony PlayStation 2", "playstation 2": "Sony PlayStation 2",
+    "playstation": "Sony PlayStation", "sony playstation": "Sony PlayStation", "psone": "Sony PlayStation", "ps2": "Sony PlayStation 2", "playstation 2": "Sony PlayStation 2",
     "ps3": "Sony PlayStation 3", "playstation 3": "Sony PlayStation 3",
     "psp": "Sony PlayStation Portable", "ps vita": "Sony PlayStation Vita",
     "xbox": "Microsoft Xbox", "original xbox": "Microsoft Xbox", "xbox 360": "Microsoft Xbox 360",
@@ -59,8 +59,11 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def infer_system(path: Path) -> str:
-    """Use path labels when unambiguous; do not pretend shared extensions identify a console."""
+def infer_system(path: Path, explicit_system: str | None = None) -> str:
+    """Classify content without guessing when an extension is shared by multiple systems."""
+    if explicit_system and explicit_system.strip():
+        normalized = " ".join(explicit_system.lower().replace("_", " ").replace("-", " ").split())
+        return SYSTEM_ALIASES.get(normalized, explicit_system.strip())
     for part in reversed(path.parts[:-1]):
         normalized = " ".join(part.lower().replace("_", " ").replace("-", " ").split())
         for alias, system in sorted(SYSTEM_ALIASES.items(), key=lambda item: len(item[0]), reverse=True):
@@ -88,6 +91,7 @@ def _connect(database: Path) -> sqlite3.Connection:
 def import_library(
     source: Path, library: Path, *, rights_basis: str, source_label: str = "user-selected local folder",
     max_bytes: int = 64 * 1024**3,
+    system_override: str | None = None,
 ) -> dict[str, Any]:
     """Recursively import supported files into a content-addressed library, without modifying sources."""
     source = source.expanduser().resolve(strict=True)
@@ -121,7 +125,7 @@ def import_library(
                 if existing:
                     counts["duplicates"] += 1
                     continue
-                system = infer_system(candidate)
+                system = infer_system(candidate, system_override)
                 relative = Path(system.replace("/", "-")) / digest[:2] / f"{digest}{extension}"
                 destination = library / "files" / relative
                 destination.parent.mkdir(parents=True, exist_ok=True)
@@ -179,12 +183,13 @@ def main() -> None:
     ingest.add_argument("--rights-basis", required=True, help="one-time declaration for this import batch")
     ingest.add_argument("--source-label", default="user-selected local folder")
     ingest.add_argument("--max-bytes", type=int, default=64 * 1024**3)
+    ingest.add_argument("--system", help="explicitly identify the console when the extension is ambiguous")
     catalog = sub.add_parser("list", help="list files already in the library")
     catalog.add_argument("--library", type=Path, default=Path.home() / "GAME-Emulator-Library")
     args = parser.parse_args()
     if args.command == "import":
         print(json.dumps(import_library(args.source, args.library, rights_basis=args.rights_basis,
-                                        source_label=args.source_label, max_bytes=args.max_bytes), indent=2))
+                                        source_label=args.source_label, max_bytes=args.max_bytes, system_override=args.system), indent=2))
     else:
         print(json.dumps(list_games(args.library), indent=2))
 

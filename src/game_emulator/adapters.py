@@ -11,6 +11,11 @@ from typing import Any
 CORE_SUFFIXES = {".dll", ".so", ".dylib"}
 
 
+def _normalize_system(value: str) -> str:
+    """Normalize Libretro vendor separators without broad fuzzy matching."""
+    return " ".join(value.replace("-", " ").split()).casefold()
+
+
 def sha256_file(path: Path) -> str:
     digest = hashlib.sha256()
     with path.open("rb") as stream:
@@ -38,6 +43,53 @@ def parse_info(path: Path) -> dict[str, str]:
     return values
 
 
+def _pipe_values(info: dict[str, str], key: str) -> list[str]:
+    return [x.strip() for x in info.get(key, "").split("|") if x.strip()]
+
+
+def _supported_systems(info: dict[str, str]) -> list[str]:
+    """Use explicit database entries as well as systemname.
+
+    Libretro .info files commonly put the actual database/system mapping in
+    'database', while 'systemname' may be a single display label. Keep both,
+    because multi-system cores can legitimately advertise several databases.
+    """
+    values = _pipe_values(info, "database") + _pipe_values(info, "systemname")
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        normalized = _normalize_system(value)
+        if normalized not in seen:
+            seen.add(normalized)
+            result.append(value)
+    return result
+
+
+def compatible_cores(
+    inventory: dict[str, Any],
+    *,
+    system: str,
+    extension: str,
+) -> list[dict[str, Any]]:
+    """Return installed cores matching both system and extension metadata."""
+    normalized_extension = extension.lower().lstrip(".")
+    matches: list[dict[str, Any]] = []
+    for core in inventory.get("cores", []):
+        systems = set(core.get("supported_systems", []))
+        extensions = {
+            str(value).lower().lstrip(".")
+            for value in core.get("supported_extensions", [])
+        }
+        normalized_system = _normalize_system(system)
+        system_match = any(
+            normalized_system == _normalize_system(value) for value in systems
+        )
+        extension_match = normalized_extension in extensions
+        if system_match and extension_match:
+            matches.append(core)
+    return matches
+
+
 def inventory_cores(core_dir: Path, info_dir: Path | None = None) -> dict[str, Any]:
     """Hash and describe installed core files; never dlopen or run them."""
     root = core_dir.expanduser().resolve(strict=True)
@@ -60,10 +112,12 @@ def inventory_cores(core_dir: Path, info_dir: Path | None = None) -> dict[str, A
             "info_file": str(info_path) if info else None,
             "display_name": info.get("display_name", core.stem),
             "corename": info.get("corename", ""),
-            "supported_extensions": [
-                x for x in info.get("supported_extensions", "").split("|") if x
-            ],
-            "supported_systems": [x for x in info.get("supported_systems", "").split("|") if x],
+            "supported_extensions": _pipe_values(info, "supported_extensions"),
+            "supported_systems": _supported_systems(info),
+            "system_id": info.get("systemid", ""),
+            "database": _pipe_values(info, "database"),
+            "license": info.get("license", ""),
+            "permissions": info.get("permissions", ""),
             "firmware": sorted({
                 value for key, value in info.items()
                 if key.startswith("firmware") and key.endswith(("_path", "_desc")) and value

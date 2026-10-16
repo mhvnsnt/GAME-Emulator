@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from game_emulator.adapters import inventory_cores, parse_info
+from game_emulator.adapters import compatible_cores, inventory_cores, parse_info
 
 
 def test_inventory_hashes_core_and_reads_info_without_loading_it(tmp_path: Path):
@@ -46,3 +46,19 @@ def test_inventory_rejects_missing_core_directory(tmp_path: Path):
         pass
     else:
         raise AssertionError("missing core directory should fail")
+
+
+def test_compatible_cores_requires_system_and_extension(tmp_path: Path):
+    cores = tmp_path / "cores"
+    cores.mkdir()
+    (cores / "demo_libretro.so").write_bytes(b"synthetic")
+    (tmp_path / "demo_libretro.info").write_text(
+        'supported_extensions = "iso|bin"\n'
+        'supported_systems = "Sony - PlayStation"\n',
+        encoding="utf-8",
+    )
+    inventory = inventory_cores(cores, tmp_path)
+    assert compatible_cores(inventory, system="Sony PlayStation", extension=".iso")
+    assert not compatible_cores(
+        inventory, system="Nintendo GameCube", extension=".iso"
+    )
