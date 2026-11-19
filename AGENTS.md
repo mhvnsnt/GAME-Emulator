@@ -29,3 +29,9 @@ On 2026-10-17 an agent committed from a working tree missing 54,456 files. `git 
 3. Say what you deleted in the commit message (which dirs/file types, and why). Message/diff mismatch on deletions = hard failure, do not push.
 4. Deletion circuit breaker: any deletion outside your task's scope blocks the commit. Stop and report instead of committing.
 5. The merger reads the PR's deletion list and matches it against the task. Unexplained deletions block the merge. A giant diff's deletions are never "probably fine".
+
+## Sourcing rule (Mars, 2026-11-19)
+
+"Anytime there's things that aren't in my Steam library just remember just go get them from wherever else they can be gotten from."
+
+"I own like hundreds of games on Xbox and anytime I mention certain games you just have to go get them because I own so many games that are like on disc and on Xbox and there's no way to actually get them to you but you have to go use the games in the commercial files and the actual source anyway."
