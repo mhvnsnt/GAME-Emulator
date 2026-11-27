@@ -29,3 +29,6 @@ On 2026-10-17 an agent committed from a working tree missing 54,456 files. `git 
 3. Say what you deleted in the commit message (which dirs/file types, and why). Message/diff mismatch on deletions = hard failure, do not push.
 4. Deletion circuit breaker: any deletion outside your task's scope blocks the commit. Stop and report instead of committing.
 5. The merger reads the PR's deletion list and matches it against the task. Unexplained deletions block the merge. A giant diff's deletions are never "probably fine".
+
+## PULL-IN-FIRST LAW (owner order, Nov 27 2026)
+Never hand-tool or build from scratch anything that already exists. Before writing new code, assets, rigs, animations, tools or pipelines, search for and pull in complete existing work in full: commercial/industry-standard tools the owner owns (e.g. Toon Boom Harmony), open-source engines, templates, kits and add-ons, mocap/animation libraries, and already decoded or deciphered formats and data (the owner's reverse-engineering and teardown repos, Tekken 7 Steam files, community modding tools). Wire them in instead of rebuilding. Hand-building is allowed only for the parts nothing existing covers, and the PR must say what was searched. Licensing: decoded commercial game data stays in private repos for reference; anything shipped or sold must use owned, licensed or open-licensed pieces.
